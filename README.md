@@ -175,13 +175,11 @@ Se cambia `MODO_RESERVA` en el archivo `.env` y se reinicia el servidor.
 
 | RNF | Cómo se implementa | Archivo |
 |---|---|---|
-| RNF-01 Avalancha de usuarios | Sala de espera virtual que admite N usuarios/seg | `app/sala_espera.py` |
+| RNF-01 Soportar la demanda | Sala de espera virtual que admite N usuarios/seg | `app/sala_espera.py` |
 | RNF-02 Reserva ≤ 300 ms | `UPDATE` atómico, pool de conexiones, el pago fuera de la transacción | `app/reservas.py` |
 | RNF-03 Sobreventa 0 % | `UPDATE ... WHERE estado='libre'` + índice único en `ordenes` | `app/reservas.py`, `sql/esquema.sql` |
-| RNF-04 Seguridad del pago | Tokenización: el backend nunca recibe el número de tarjeta | `app/pasarela_simulada.py` |
-| RNF-04 Cifrado en tránsito | HTTPS con TLS 1.3 obligatorio (puerto 8443) | `scripts/servidor_tls.py` |
-| RNF-05 Bloqueo de bots | Límite de peticiones por IP + máximo 4 entradas por cliente + pase firmado (HMAC) | `app/antibots.py`, `app/main.py` |
-| RNF-04 Entradas no falsificables | QR firmado con HMAC y validación de un solo uso en la puerta | `app/entradas.py` |
+| RNF-04 TLS 1.3 + PCI-DSS | Tokenización (el backend nunca recibe la tarjeta), HTTPS solo TLS 1.3 y QR firmado con HMAC | `app/pasarela_simulada.py`, `scripts/servidor_tls.py`, `app/entradas.py` |
+| RNF-05 Bloqueo de bots ≥ 99.8 % | Límite de peticiones por IP + máximo 4 entradas por cliente + pase firmado (HMAC) | `app/antibots.py`, `app/main.py` |
 
 ## Pruebas
 
