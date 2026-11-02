@@ -163,9 +163,16 @@ Dos cosas que conviene decir antes de que las pregunten:
 
 ## Imágenes
 
-Los afiches de `static/img` son fotografías de Pexels, con licencia libre para
-uso comercial y sin atribución obligatoria. Se dejan igual los cinco afiches
-dibujados en SVG, por si se quiere volver a ellos.
+Los afiches de `static/img` son fotografías con licencia libre. Se dejan
+también los cinco afiches dibujados en SVG, por si se quiere volver a ellos.
+
+| Archivo | Origen y licencia |
+|---|---|
+| `grupo5.jpg`, `agua-marina.jpg`, `sinfonica-foto.jpg`, `lima-beat-foto.jpg` | Pexels, licencia libre, sin atribución obligatoria |
+| `libido.jpg` | *Libido band in live in concert in UNMSM*, por RockSkaPunkMetal, Wikimedia Commons, **CC BY-SA 4.0** |
+
+La foto de Líbido exige atribución por su licencia, y por eso figura aquí con
+su autor. Las de Pexels no la exigen.
 
 Para cambiar el afiche de un evento se guarda la imagen en `static/img` y:
 
