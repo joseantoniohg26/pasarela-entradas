@@ -30,7 +30,7 @@ CARTELERA = [
         "categoria": "Cumbia",
         "lugar": "Estadio Nacional, Lima",
         "fecha": "2026-12-12 20:00-05",
-        "imagen": "cumbia.svg",
+        "imagen": "grupo5.jpg",
         "descripcion": (
             "La agrupación de Monsefú llega al Estadio Nacional con su gira de aniversario. "
             "Tres horas de show con la orquesta completa y los temas de siempre."
@@ -44,7 +44,7 @@ CARTELERA = [
         "categoria": "Cumbia",
         "lugar": "Arena 1, Costa Verde",
         "fecha": "2027-01-24 20:00-05",
-        "imagen": "concierto-internacional.svg",
+        "imagen": "agua-marina.jpg",
         "descripcion": (
             "Los hermanos Quiroga frente al mar, con invitados y un repaso por sus cinco "
             "décadas de trayectoria."
@@ -58,7 +58,7 @@ CARTELERA = [
         "categoria": "Festival",
         "lugar": "Explanada del Estadio Monumental",
         "fecha": "2027-02-07 17:00-05",
-        "imagen": "rock-arena.svg",
+        "imagen": "rock-lima.jpg",
         "descripcion": (
             "Tres bandas que marcaron el rock peruano de los noventa, juntas en un solo "
             "escenario. La entrada incluye acceso a la zona de food trucks."
@@ -72,7 +72,7 @@ CARTELERA = [
         "categoria": "Sinfónico",
         "lugar": "Gran Teatro Nacional, San Borja",
         "fecha": "2027-03-14 19:30-05",
-        "imagen": "sinfonica.svg",
+        "imagen": "sinfonica-foto.jpg",
         "descripcion": (
             "La Orquesta Sinfónica Nacional interpreta las bandas sonoras más conocidas "
             "del cine, acompañadas de proyecciones en pantalla gigante."
@@ -86,7 +86,7 @@ CARTELERA = [
         "categoria": "Festival",
         "lugar": "Jockey Club del Perú, Surco",
         "fecha": "2027-04-18 22:00-05",
-        "imagen": "lima-beat.svg",
+        "imagen": "lima-beat-foto.jpg",
         "descripcion": (
             "Seis DJ internacionales desde las diez de la noche hasta el amanecer, "
             "con escenario principal al aire libre y carpa de música house."

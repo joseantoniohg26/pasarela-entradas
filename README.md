@@ -161,6 +161,23 @@ Dos cosas que conviene decir antes de que las pregunten:
   del puerto 8000 que se usa en las pruebas de carga. En producción, con un
   dominio real, sí se activa.
 
+## Imágenes
+
+Los afiches de `static/img` son fotografías de Pexels, con licencia libre para
+uso comercial y sin atribución obligatoria. Se dejan igual los cinco afiches
+dibujados en SVG, por si se quiere volver a ellos.
+
+Para cambiar el afiche de un evento se guarda la imagen en `static/img` y:
+
+```powershell
+.venv\Scripts\python scripts\cambiar_afiche.py --listar
+.venv\Scripts\python scripts\cambiar_afiche.py --evento 1 --imagen grupo5.jpg
+```
+
+Los nombres de los artistas son reales para que la cartelera se vea creíble,
+pero el sistema es un prototipo académico: no vende entradas ni cobra pagos, y
+así lo dice el aviso que aparece en la parte superior de la página.
+
 ## Modos de reserva (para demostrar el trade-off)
 
 Se cambia `MODO_RESERVA` en el archivo `.env` y se reinicia el servidor.
