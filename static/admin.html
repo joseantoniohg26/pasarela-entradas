@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Tiquetera · Panel de administración</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <header class="cabecera">
+    <a class="marca" href="index.html">TIQUE<span>TERA</span></a>
+    <nav class="navegacion">
+      <a href="index.html">Ver la tienda</a>
+    </nav>
+    <span id="modo" class="modo">administración</span>
+  </header>
+
+  <main>
+    <!-- Acceso -->
+    <section id="vista-clave" class="tarjeta acceso" hidden>
+      <h1>Panel de administración</h1>
+      <p class="nota">Esta zona pide la clave que está en el archivo <code>.env</code> (ADMIN_CLAVE).</p>
+      <form id="form-clave">
+        <label>Clave<input name="clave" type="password" required autocomplete="current-password"></label>
+        <button type="submit">Entrar</button>
+      </form>
+      <p id="mensaje-clave" class="mensaje" role="status"></p>
+    </section>
+
+    <!-- Panel -->
+    <section id="vista-panel" hidden>
+      <div class="panel-cabecera">
+        <div>
+          <h1>Ventas y operación</h1>
+          <p class="nota" id="actualizado">—</p>
+        </div>
+        <button type="button" id="btn-salir" class="secundario">Salir</button>
+      </div>
+
+      <div class="indicadores" id="indicadores"></div>
+
+      <h2 class="titulo-seccion">Ocupación por evento</h2>
+      <div class="tarjeta" id="ocupacion"></div>
+
+      <h2 class="titulo-seccion">Control de acceso en la puerta</h2>
+      <div class="tarjeta">
+        <p class="nota">Pega aquí el contenido del QR de la entrada (lo que leería el escáner).</p>
+        <form id="form-validar" class="validar">
+          <input name="contenido" placeholder="TIQUETERA|ORD-XXXXXXXX|firma" required>
+          <button type="submit">Validar entrada</button>
+        </form>
+        <div id="resultado-validacion"></div>
+      </div>
+
+      <h2 class="titulo-seccion">Métricas en vivo</h2>
+      <div class="tarjeta">
+        <div class="estado-servidor" id="estado-servidor"></div>
+        <div class="contadores" id="contadores"></div>
+        <button type="button" id="btn-reiniciar" class="secundario">Reiniciar contadores</button>
+        <p class="ayuda">Útil antes de cada prueba de carga: deja los contadores en cero.</p>
+      </div>
+
+      <h2 class="titulo-seccion">Últimas compras</h2>
+      <div class="tarjeta tabla-contenedor">
+        <table class="tabla" id="tabla-ordenes"></table>
+      </div>
+    </section>
+  </main>
+
+  <footer class="pie">
+    Panel interno · Caso 2: pasarela de pagos para eventos masivos (UNAMAD)
+  </footer>
+
+  <script src="admin.js"></script>
+</body>
+</html>

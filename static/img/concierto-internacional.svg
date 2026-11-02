@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-label="Afiche del Gran Concierto Internacional">
+  <defs>
+    <linearGradient id="fondo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2b0b4d"/>
+      <stop offset="55%" stop-color="#6d1a6b"/>
+      <stop offset="100%" stop-color="#18061f"/>
+    </linearGradient>
+    <radialGradient id="halo" cx="50%" cy="22%" r="55%">
+      <stop offset="0" stop-color="#ffd9f2" stop-opacity=".85"/>
+      <stop offset="100%" stop-color="#ffd9f2" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="haz" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff2b8" stop-opacity=".55"/>
+      <stop offset="100%" stop-color="#fff2b8" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="900" height="1200" fill="url(#fondo)"/>
+  <circle cx="450" cy="265" r="400" fill="url(#halo)"/>
+
+  <g>
+    <polygon points="450,150 250,900 400,900" fill="url(#haz)"/>
+    <polygon points="450,150 650,900 500,900" fill="url(#haz)"/>
+    <polygon points="450,150 60,860 200,900" fill="url(#haz)" opacity=".6"/>
+    <polygon points="450,150 840,860 700,900" fill="url(#haz)" opacity=".6"/>
+  </g>
+
+  <circle cx="450" cy="255" r="70" fill="#fff6c9"/>
+  <circle cx="450" cy="255" r="110" fill="none" stroke="#ffe79a" stroke-opacity=".45" stroke-width="3"/>
+
+  <g fill="#11040f">
+    <path d="M0 1010 C120 960 220 1010 330 975 C450 935 560 1000 690 965 C790 938 860 965 900 950 L900 1200 L0 1200 Z"/>
+  </g>
+  <g fill="#11040f" opacity=".95">
+    <circle cx="90" cy="985" r="26"/><circle cx="195" cy="1000" r="22"/>
+    <circle cx="300" cy="972" r="27"/><circle cx="415" cy="995" r="23"/>
+    <circle cx="525" cy="968" r="26"/><circle cx="640" cy="992" r="22"/>
+    <circle cx="755" cy="965" r="27"/><circle cx="855" cy="988" r="23"/>
+  </g>
+
+  <text x="60" y="1135" font-family="Segoe UI, system-ui, sans-serif" font-size="34" font-weight="700"
+        letter-spacing="10" fill="#ffd9f2" fill-opacity=".9">LIMA 2026</text>
+</svg>

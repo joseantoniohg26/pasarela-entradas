@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" role="img" aria-label="Afiche del festival electrónico Lima Beat">
+  <defs>
+    <linearGradient id="lb-fondo" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#16043a"/>
+      <stop offset="52%" stop-color="#6d28d9"/>
+      <stop offset="100%" stop-color="#030014"/>
+    </linearGradient>
+    <linearGradient id="lb-disco" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#22d3ee"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="900" height="1200" fill="url(#lb-fondo)"/>
+
+  <circle cx="450" cy="420" r="210" fill="url(#lb-disco)"/>
+  <circle cx="450" cy="420" r="210" fill="none" stroke="#a5f3fc" stroke-opacity=".6" stroke-width="3"/>
+  <circle cx="450" cy="420" r="60" fill="#030014"/>
+  <circle cx="450" cy="420" r="12" fill="#a5f3fc"/>
+
+  <g stroke="#22d3ee" stroke-opacity=".5" stroke-width="2">
+    <path d="M0 760 L900 760"/>
+    <path d="M0 820 L900 820"/>
+    <path d="M0 900 L900 900"/>
+    <path d="M0 1000 L900 1000"/>
+    <path d="M0 1120 L900 1120"/>
+    <path d="M450 740 L-250 1200"/>
+    <path d="M450 740 L120 1200"/>
+    <path d="M450 740 L450 1200"/>
+    <path d="M450 740 L780 1200"/>
+    <path d="M450 740 L1150 1200"/>
+  </g>
+
+  <g fill="#ec4899" opacity=".85">
+    <rect x="80" y="620" width="26" height="120" rx="6"/>
+    <rect x="128" y="560" width="26" height="180" rx="6"/>
+    <rect x="176" y="660" width="26" height="80" rx="6"/>
+    <rect x="698" y="580" width="26" height="160" rx="6"/>
+    <rect x="746" y="640" width="26" height="100" rx="6"/>
+    <rect x="794" y="600" width="26" height="140" rx="6"/>
+  </g>
+
+  <text x="60" y="1165" font-family="Segoe UI, system-ui, sans-serif" font-size="30" font-weight="700"
+        letter-spacing="12" fill="#a5f3fc" fill-opacity=".9">22:00 - 06:00</text>
+</svg>
