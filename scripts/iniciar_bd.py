@@ -25,51 +25,50 @@ from app import config  # noqa: E402
 # en la cartelera: es el de fecha más cercana.
 CARTELERA = [
     {
-        "nombre": "Gran Concierto Internacional 2026",
-        "artista": "Gira Mundial · Única fecha en Lima",
-        "categoria": "Concierto",
+        "nombre": "Grupo 5 · Gira Nacional 2026",
+        "artista": "Grupo 5",
+        "categoria": "Cumbia",
         "lugar": "Estadio Nacional, Lima",
         "fecha": "2026-12-12 20:00-05",
-        "imagen": "concierto-internacional.svg",
+        "imagen": "cumbia.svg",
         "descripcion": (
-            "La gira más esperada del año llega a Lima con una sola fecha. "
-            "Dos horas y media de show, pantallas de 360 grados y la banda completa "
-            "en el escenario del Estadio Nacional."
+            "La agrupación de Monsefú llega al Estadio Nacional con su gira de aniversario. "
+            "Tres horas de show con la orquesta completa y los temas de siempre."
         ),
         "filas": 10,
         "por_fila": 20,
     },
     {
-        "nombre": "Festival Rock en la Arena",
-        "artista": "12 bandas · 2 escenarios",
-        "categoria": "Festival",
+        "nombre": "Agua Marina en concierto",
+        "artista": "Agua Marina",
+        "categoria": "Cumbia",
         "lugar": "Arena 1, Costa Verde",
-        "fecha": "2027-01-24 16:00-05",
-        "imagen": "rock-arena.svg",
+        "fecha": "2027-01-24 20:00-05",
+        "imagen": "concierto-internacional.svg",
         "descripcion": (
-            "Doce bandas nacionales e internacionales en dos escenarios frente al mar. "
-            "La entrada incluye acceso a la zona de food trucks."
+            "Los hermanos Quiroga frente al mar, con invitados y un repaso por sus cinco "
+            "décadas de trayectoria."
         ),
         "filas": 8,
         "por_fila": 14,
     },
     {
-        "nombre": "Noche de Cumbia Peruana",
-        "artista": "Las orquestas clásicas en vivo",
-        "categoria": "Concierto",
+        "nombre": "Festival Rock en Lima",
+        "artista": "Líbido · Mar de Copas · Amén",
+        "categoria": "Festival",
         "lugar": "Explanada del Estadio Monumental",
-        "fecha": "2027-02-07 19:00-05",
-        "imagen": "cumbia.svg",
+        "fecha": "2027-02-07 17:00-05",
+        "imagen": "rock-arena.svg",
         "descripcion": (
-            "Las orquestas que marcaron a varias generaciones, juntas en una sola noche. "
-            "Cinco horas de cumbia sin parar y zona de baile sin asientos."
+            "Tres bandas que marcaron el rock peruano de los noventa, juntas en un solo "
+            "escenario. La entrada incluye acceso a la zona de food trucks."
         ),
         "filas": 8,
         "por_fila": 14,
     },
     {
         "nombre": "Sinfónica: bandas sonoras de cine",
-        "artista": "Orquesta Sinfónica Nacional",
+        "artista": "Orquesta Sinfónica Nacional del Perú",
         "categoria": "Sinfónico",
         "lugar": "Gran Teatro Nacional, San Borja",
         "fecha": "2027-03-14 19:30-05",

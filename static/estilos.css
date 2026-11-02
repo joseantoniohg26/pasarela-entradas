@@ -60,7 +60,17 @@ a { color: inherit; text-decoration: none; }
   color: var(--suave);
 }
 
-main { width: 100%; max-width: 1180px; margin: 0 auto; padding: 28px 16px 56px; flex: 1; }
+.aviso-demo {
+  margin: 0;
+  padding: 9px 24px;
+  text-align: center;
+  font-size: .78rem;
+  color: var(--oro);
+  background: rgba(245, 213, 122, .09);
+  border-bottom: 1px solid rgba(245, 213, 122, .22);
+}
+
+main { width: 100%; max-width: 1500px; margin: 0 auto; padding: 28px 32px 56px; flex: 1; }
 
 .pie {
   padding: 20px 24px;
@@ -83,7 +93,8 @@ main { width: 100%; max-width: 1180px; margin: 0 auto; padding: 28px 16px 56px; 
   display: inline-block;
   font: inherit;
   font-weight: 600;
-  padding: 12px 22px;
+  font-size: 1.02rem;
+  padding: 14px 28px;
   border: 0;
   border-radius: 10px;
   background: var(--acento);
@@ -113,7 +124,7 @@ main { width: 100%; max-width: 1180px; margin: 0 auto; padding: 28px 16px 56px; 
 }
 
 .titulo-seccion {
-  font-size: 1.05rem;
+  font-size: 1.35rem;
   letter-spacing: .04em;
   margin: 40px 0 16px;
 }
@@ -129,8 +140,8 @@ main { width: 100%; max-width: 1180px; margin: 0 auto; padding: 28px 16px 56px; 
   position: relative;
   display: flex;
   align-items: flex-end;
-  min-height: 380px;
-  padding: 36px;
+  min-height: 460px;
+  padding: 48px;
   border-radius: 20px;
   overflow: hidden;
   background: var(--superficie-2) center/cover no-repeat;
@@ -142,18 +153,18 @@ main { width: 100%; max-width: 1180px; margin: 0 auto; padding: 28px 16px 56px; 
   inset: 0;
   background: linear-gradient(100deg, rgba(12, 10, 18, .94) 10%, rgba(12, 10, 18, .6) 55%, rgba(12, 10, 18, .2) 100%);
 }
-.destacado-texto { position: relative; z-index: 1; max-width: 560px; }
-.destacado h1 { font-size: 2.3rem; line-height: 1.12; margin: 14px 0 6px; }
-.destacado-artista { margin: 0; color: var(--oro); font-weight: 600; }
-.destacado-datos { margin: 10px 0 22px; color: var(--suave); }
+.destacado-texto { position: relative; z-index: 1; max-width: 660px; }
+.destacado h1 { font-size: 3.1rem; line-height: 1.08; margin: 18px 0 8px; }
+.destacado-artista { margin: 0; color: var(--oro); font-weight: 600; font-size: 1.15rem; }
+.destacado-datos { margin: 12px 0 26px; color: var(--suave); font-size: 1.02rem; }
 .acciones { display: flex; flex-wrap: wrap; gap: 12px; }
 
 /* ---------- catálogo: rejilla ---------- */
 
 .rejilla {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+  gap: 24px;
 }
 
 .tarjeta-evento {
@@ -190,7 +201,7 @@ main { width: 100%; max-width: 1180px; margin: 0 auto; padding: 28px 16px 56px; 
   font-size: .8rem;
 }
 
-.datos-evento { padding: 14px 16px 18px; }
+.datos-evento { padding: 18px 20px 22px; }
 .datos-evento .fecha {
   font-size: .72rem;
   font-weight: 700;
@@ -198,10 +209,10 @@ main { width: 100%; max-width: 1180px; margin: 0 auto; padding: 28px 16px 56px; 
   text-transform: uppercase;
   color: var(--acento-claro);
 }
-.datos-evento h3 { margin: 6px 0 4px; font-size: 1rem; line-height: 1.3; }
-.datos-evento .lugar { margin: 0; color: var(--suave); font-size: .82rem; }
-.datos-evento .desde { margin: 12px 0 0; font-size: .85rem; color: var(--suave); }
-.datos-evento .desde strong { color: var(--texto); font-size: 1.05rem; }
+.datos-evento h3 { margin: 8px 0 5px; font-size: 1.12rem; line-height: 1.28; }
+.datos-evento .lugar { margin: 0; color: var(--suave); font-size: .88rem; }
+.datos-evento .desde { margin: 14px 0 0; font-size: .9rem; color: var(--suave); }
+.datos-evento .desde strong { color: var(--texto); font-size: 1.2rem; }
 
 /* ---------- detalle del evento ---------- */
 
