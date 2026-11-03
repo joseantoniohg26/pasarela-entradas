@@ -521,7 +521,7 @@ export default function App() {
             <button
               type="button"
               onClick={() => setMostrarSpotify(false)}
-              className="absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/90 text-gray-300 hover:text-white transition-all cursor-pointer text-xs"
+              className="absolute top-2 left-2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-black/70 hover:bg-black text-gray-300 hover:text-white transition-all cursor-pointer text-xs shadow-md border border-white/10"
               title="Cerrar reproductor"
               aria-label="Cerrar reproductor de Spotify"
             >
