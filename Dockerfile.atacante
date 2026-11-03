@@ -15,3 +15,4 @@ COPY . /app
 EXPOSE 5665
 
 CMD ["python3", "scripts/servidor_dashboard_atacante.py"]
+
