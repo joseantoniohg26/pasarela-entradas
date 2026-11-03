@@ -28,6 +28,7 @@ export default function App() {
   const [posicionCola, setPosicionCola] = useState<number | null>(null);
   const [paseCompra, setPaseCompra] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [mostrarSpotify, setMostrarSpotify] = useState(false);
 
   // Iniciar flujo de compra pasando por la Sala de Espera de Go
   const iniciarCompra = async () => {
@@ -301,19 +302,18 @@ export default function App() {
               <h3 className="text-base font-bold text-[#1F1F1F] uppercase mb-3 border-b-2 border-[#D31411] pb-1 inline-block">
                 MULTIMEDIA
               </h3>
-              <div className="w-full max-w-md">
-                <iframe
-                  data-testid="embed-iframe"
-                  className="reproductor w-full"
-                  style={{ borderRadius: "12px", height: "152px" }}
-                  src="https://open.spotify.com/embed/artist/3vQ0GE3mI0dAaxIMYe5g7z?utm_source=generator"
-                  frameBorder="0"
-                  allowFullScreen
-                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
-                  loading="lazy"
-                  title="Paulo Londra en Spotify"
-                ></iframe>
-              </div>
+              <p className="text-gray-600 mb-3">
+                Escucha los mejores temas de Paulo Londra mientras esperas en la cola virtual activando el reproductor interactivo.
+              </p>
+              <button
+                onClick={() => setMostrarSpotify(!mostrarSpotify)}
+                className="inline-flex items-center gap-2 bg-[#1DB954] hover:bg-[#1aa34a] text-white font-bold text-xs px-4 py-2 rounded-full shadow-sm transition-transform active:scale-95"
+              >
+                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+                </svg>
+                <span>{mostrarSpotify ? "Ocultar Reproductor" : "Reproducir en Spotify"}</span>
+              </button>
             </div>
           </div>
 
@@ -350,7 +350,53 @@ export default function App() {
         </div>
       </div>
 
-      {/* 6. Footer Oficial Teleticket */}
+      {/* 6. Spotify Floating Action Button (FAB) Flotante persistente con el Scroll */}
+      <div className="fixed bottom-16 lg:bottom-6 right-5 z-40 flex flex-col items-end">
+        {/* Panel del reproductor expandible */}
+        {mostrarSpotify && (
+          <div className="mb-3 w-80 sm:w-96 bg-black/90 p-2.5 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-lg animate-in fade-in slide-in-from-bottom-4 duration-200">
+            <div className="flex justify-between items-center px-2 pb-1.5 text-white text-[11px] font-bold">
+              <span className="flex items-center gap-1.5 text-[#1DB954]">
+                <span className="w-2 h-2 rounded-full bg-[#1DB954] animate-ping"></span>
+                Paulo Londra en Spotify
+              </span>
+              <button
+                onClick={() => setMostrarSpotify(false)}
+                className="text-gray-400 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+            <iframe
+              data-testid="embed-iframe"
+              className="reproductor w-full"
+              style={{ borderRadius: "12px", height: "152px" }}
+              src="https://open.spotify.com/embed/artist/3vQ0GE3mI0dAaxIMYe5g7z?utm_source=generator&theme=0"
+              frameBorder="0"
+              allowFullScreen
+              allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+              loading="lazy"
+              title="Paulo Londra en Spotify"
+            ></iframe>
+          </div>
+        )}
+
+        {/* Botón FAB circular verde oficial de Spotify */}
+        <button
+          onClick={() => setMostrarSpotify(!mostrarSpotify)}
+          className="group relative flex items-center gap-2 bg-[#1DB954] hover:bg-[#1aa34a] text-white p-3.5 rounded-full shadow-xl transition-all duration-300 hover:scale-105 active:scale-95"
+          title="Escuchar a Paulo Londra"
+        >
+          <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+            <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
+          </svg>
+          <span className="hidden sm:inline font-bold text-xs pr-1">
+            {mostrarSpotify ? "Cerrar Música" : "Escuchar Hits"}
+          </span>
+        </button>
+      </div>
+
+      {/* 7. Footer Oficial Teleticket */}
       <footer className="mt-auto bg-[#1F1F1F] text-gray-400 text-xs py-8 pb-16 lg:pb-8 border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-white font-bold text-lg">
