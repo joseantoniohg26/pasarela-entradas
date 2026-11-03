@@ -184,7 +184,6 @@ func (p *PasarelaSimulada) Cobrar(token string, monto float64, descripcion, emai
 }
 
 func (p *PasarelaSimulada) cobrarCulqiAPI(token string, monto float64, descripcion, email string) (map[string]any, error) {
-	// Culqi requiere el monto expresado en céntimos
 	centimos := int64(monto * 100)
 	if descripcion == "" {
 		descripcion = "Entrada Paulo Londra - Estadio Nacional 2026"
@@ -229,31 +228,11 @@ func (p *PasarelaSimulada) cobrarCulqiAPI(token string, monto float64, descripci
 	}
 
 	if resp.StatusCode >= 400 {
-		userMsg, _ := culqiResp["user_message"].(string)
-		merchantMsg, _ := culqiResp["merchant_message"].(string)
-		if userMsg != "" {
-			return nil, errors.New(userMsg)
-		}
-		if merchantMsg != "" {
-			return nil, errors.New(merchantMsg)
-		}
-		return nil, fmt.Errorf("cargo rechazado por Culqi (status %d)", resp.StatusCode)
+		return nil, extraerErrorCulqi(culqiResp, resp.StatusCode)
 	}
 
+	marca, ultimos4 := extraerDatosTarjetaCulqi(culqiResp)
 	cargoID, _ := culqiResp["id"].(string)
-	ultimos4 := "----"
-	marca := "Culqi"
-
-	if srcObj, ok := culqiResp["source"].(map[string]any); ok {
-		if iin, ok := srcObj["iin"].(map[string]any); ok {
-			if m, ok := iin["card_brand"].(string); ok && m != "" {
-				marca = m
-			}
-		}
-		if last4, ok := srcObj["last_four"].(string); ok && last4 != "" {
-			ultimos4 = last4
-		}
-	}
 
 	res := map[string]any{
 		"id":               cargoID,
@@ -269,6 +248,37 @@ func (p *PasarelaSimulada) cobrarCulqiAPI(token string, monto float64, descripci
 	p.mu.Unlock()
 
 	return res, nil
+}
+
+func extraerErrorCulqi(resp map[string]any, statusCode int) error {
+	if userMsg, _ := resp["user_message"].(string); userMsg != "" {
+		return errors.New(userMsg)
+	}
+	if merchantMsg, _ := resp["merchant_message"].(string); merchantMsg != "" {
+		return errors.New(merchantMsg)
+	}
+	return fmt.Errorf("cargo rechazado por Culqi (status %d)", statusCode)
+}
+
+func extraerDatosTarjetaCulqi(resp map[string]any) (string, string) {
+	marca := "Culqi"
+	ultimos4 := "----"
+
+	srcObj, ok := resp["source"].(map[string]any)
+	if !ok {
+		return marca, ultimos4
+	}
+
+	if iin, ok := srcObj["iin"].(map[string]any); ok {
+		if m, ok := iin["card_brand"].(string); ok && m != "" {
+			marca = m
+		}
+	}
+	if last4, ok := srcObj["last_four"].(string); ok && last4 != "" {
+		ultimos4 = last4
+	}
+
+	return marca, ultimos4
 }
 
 // --- Antibots: Limitador por IP (Ventana Deslizante) ---

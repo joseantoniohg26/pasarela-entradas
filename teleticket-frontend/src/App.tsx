@@ -66,7 +66,7 @@ export default function App() {
 
     const handleMouseEnter = (e: MouseEvent) => {
       const target = (e.currentTarget as SVGGraphicsElement);
-      const nombre = target.getAttribute("data-name") || target.id;
+      const nombre = target.dataset.name || target.id;
       setTooltip({ texto: nombre, x: e.clientX, y: e.clientY, visible: true });
     };
 
@@ -161,15 +161,115 @@ export default function App() {
     // Si viene con pase en el hash (ej. #/comprar/1?pase=XYZ), abrir pasarela Culqi
     const hash = window.location.hash;
     if (hash.includes("comprar")) {
-      const match = hash.match(/pase=([^&]+)/);
-      if (match && match[1]) {
+      const match = /pase=([^&]+)/.exec(hash);
+      if (match?.[1]) {
         setPaseCompra(decodeURIComponent(match[1]));
-        setModalCulqi(true);
-      } else {
-        setModalCulqi(true);
       }
+      setModalCulqi(true);
     }
   }, []);
+
+  const renderPrecioConadis = (s: SectorTarifa) => {
+    if (!s.conadis) {
+      return <span className="text-gray-400 font-bold">----</span>;
+    }
+    if (s.agotadoConadis) {
+      return (
+        <span className="inline-block bg-[#D31411] text-white text-[9px] font-black px-3 py-1 rounded-sm uppercase tracking-wider shadow-xs">
+          AGOTADO
+        </span>
+      );
+    }
+    return (
+      <span className="font-bold text-xs text-gray-700">
+        S/ {s.conadis.toFixed(2)}
+      </span>
+    );
+  };
+
+  const renderContenidoModalCompra = () => {
+    if (cargando) {
+      return (
+        <div className="py-8 space-y-3">
+          <div className="w-10 h-10 border-4 border-[#D31411] border-t-transparent rounded-full animate-spin mx-auto" />
+          <p className="text-xs font-semibold text-gray-600">Conectando con la Sala de Espera...</p>
+        </div>
+      );
+    }
+
+    if (enSala) {
+      return (
+        <div className="py-4 space-y-3">
+          <div className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-black">
+            ESTÁS EN LA COLA VIRTUAL
+          </div>
+          <h4 className="text-lg font-extrabold text-[#1F1F1F]">PAULO LONDRA · LIMA 2026</h4>
+          <p className="text-xs text-gray-500">
+            Por favor mantén esta ventana abierta. Tu turno avanzará automáticamente.
+          </p>
+
+          <div className="border border-gray-200 rounded-md p-4 bg-gray-50 space-y-1">
+            <span className="text-[10px] text-gray-400 uppercase font-bold block">TU LUGAR EN LA COLA</span>
+            <span className="text-4xl font-black text-[#D31411]">
+              {posicionCola !== null ? `#${posicionCola}` : "Verificando..."}
+            </span>
+            <span className="text-[11px] text-gray-500 block pt-1">
+              Ticket ID: <code className="font-mono text-gray-700">{ticketCola}</code>
+            </span>
+          </div>
+
+          <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+            <div className="bg-[#D31411] h-1.5 rounded-full animate-pulse w-3/4" />
+          </div>
+        </div>
+      );
+    }
+
+    return (
+      <div className="py-4 space-y-4">
+        <div className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-black">
+          ¡ES TU TURNO DE COMPRAR!
+        </div>
+        <h4 className="text-lg font-extrabold text-[#1F1F1F]">Selecciona tu Entrada</h4>
+        <p className="text-xs text-gray-600">
+          Tienes 5 minutos para completar tu reserva antes de que el pase expire.
+        </p>
+
+        <div className="text-left space-y-2 max-h-48 overflow-y-auto pr-1">
+          {SECTORES.map(s => (
+            <button
+              type="button"
+              key={s.id}
+              disabled={s.agotadoFull}
+              onClick={() => setSectorSeleccionado(s.id)}
+              className={`w-full flex justify-between items-center p-2.5 border rounded-sm text-xs transition-all ${
+                sectorSeleccionado === s.id ? "border-[#D31411] bg-red-50/40" : "hover:border-gray-300"
+              } ${s.agotadoFull ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            >
+              <div className="text-left">
+                <span className="font-bold text-gray-800 block">{s.nombre}</span>
+                <span className="text-[10px] text-gray-500">{s.tipo}</span>
+              </div>
+              <span className="font-extrabold text-[#D31411]">
+                {s.agotadoFull ? "AGOTADO" : `S/ ${s.full.toFixed(2)}`}
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => {
+            setModalCompra(false);
+            setModalCulqi(true);
+          }}
+          className="w-full bg-[#D31411] hover:bg-[#b5100d] text-white font-bold text-xs uppercase py-3 rounded-xs tracking-wider cursor-pointer shadow-md transition-all active:scale-95"
+        >
+          Continuar al Mapa de Butacas y Pago Culqi
+        </button>
+      </div>
+    );
+  };
 
   const sectorActivo = SECTORES.find(s => s.id === sectorSeleccionado) || SECTORES[0];
 
@@ -323,19 +423,7 @@ export default function App() {
 
                           {/* Casilla Conadis */}
                           <td className="py-3 px-4 text-center">
-                            {s.conadis ? (
-                              s.agotadoConadis ? (
-                                <span className="inline-block bg-[#D31411] text-white text-[9px] font-black px-3 py-1 rounded-sm uppercase tracking-wider shadow-xs">
-                                  AGOTADO
-                                </span>
-                              ) : (
-                                <span className="font-bold text-xs text-gray-700">
-                                  S/ {s.conadis.toFixed(2)}
-                                </span>
-                              )
-                            ) : (
-                              <span className="text-gray-400 font-bold">----</span>
-                            )}
+                            {renderPrecioConadis(s)}
                           </td>
                         </tr>
                       );
@@ -418,7 +506,7 @@ export default function App() {
             onClick={() => iniciarCompra()}
             className="bg-[#D31411] hover:bg-[#b5100d] text-white font-extrabold text-xs uppercase px-5 py-2.5 rounded-xs flex items-center gap-1.5 shadow-md active:scale-95"
           >
-            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-3.5 h-3.5" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
             </svg>
             <span>Tickets</span>
@@ -432,8 +520,8 @@ export default function App() {
           <div className="mb-3 w-80 sm:w-96 bg-black/90 p-2.5 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-lg animate-in fade-in slide-in-from-bottom-4 duration-200">
             <div className="flex justify-between items-center px-2 pb-1.5 text-white text-[11px] font-bold">
               <span className="flex items-center gap-1.5 text-[#1DB954]">
-                <span className="w-2 h-2 rounded-full bg-[#1DB954] animate-ping"></span>
-                Paulo Londra en Spotify
+                <span className="w-2 h-2 rounded-full bg-[#1DB954] animate-ping" />
+                <span>Paulo Londra en Spotify</span>
               </span>
               <button
                 onClick={() => setMostrarSpotify(false)}
@@ -444,10 +532,9 @@ export default function App() {
             </div>
             <iframe
               data-testid="embed-iframe"
-              className="reproductor w-full"
+              className="reproductor w-full border-0"
               style={{ borderRadius: "12px", height: "152px" }}
               src="https://open.spotify.com/embed/artist/3vQ0GE3mI0dAaxIMYe5g7z?utm_source=generator&theme=0"
-              frameBorder="0"
               allowFullScreen
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
               loading="lazy"
@@ -461,7 +548,7 @@ export default function App() {
           className="group relative flex items-center gap-2 bg-[#1DB954] hover:bg-[#1aa34a] text-white p-3.5 rounded-full shadow-xl transition-all duration-300 hover:scale-105 active:scale-95"
           title="Escuchar a Paulo Londra"
         >
-          <svg className="w-6 h-6 fill-current" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 fill-current" aria-hidden="true" viewBox="0 0 24 24">
             <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
           </svg>
           <span className="hidden sm:inline font-bold text-xs pr-1">
@@ -498,77 +585,7 @@ export default function App() {
               ✕
             </button>
 
-            {cargando ? (
-              <div className="py-8 space-y-3">
-                <div className="w-10 h-10 border-4 border-[#D31411] border-t-transparent rounded-full animate-spin mx-auto"></div>
-                <p className="text-xs font-semibold text-gray-600">Conectando con la Sala de Espera...</p>
-              </div>
-            ) : enSala ? (
-              <div className="py-4 space-y-3">
-                <div className="inline-block bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-xs font-black">
-                  ESTÁS EN LA COLA VIRTUAL
-                </div>
-                <h4 className="text-lg font-extrabold text-[#1F1F1F]">PAULO LONDRA · LIMA 2026</h4>
-                <p className="text-xs text-gray-500">
-                  Por favor mantén esta ventana abierta. Tu turno avanzará automáticamente.
-                </p>
-
-                <div className="border border-gray-200 rounded-md p-4 bg-gray-50 space-y-1">
-                  <span className="text-[10px] text-gray-400 uppercase font-bold block">TU LUGAR EN LA COLA</span>
-                  <span className="text-4xl font-black text-[#D31411]">
-                    {posicionCola !== null ? `#${posicionCola}` : "Verificando..."}
-                  </span>
-                  <span className="text-[11px] text-gray-500 block pt-1">
-                    Ticket ID: <code className="font-mono text-gray-700">{ticketCola}</code>
-                  </span>
-                </div>
-
-                <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-                  <div className="bg-[#D31411] h-1.5 rounded-full animate-pulse w-3/4"></div>
-                </div>
-              </div>
-            ) : (
-              <div className="py-4 space-y-4">
-                <div className="inline-block bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-black">
-                  ¡ES TU TURNO DE COMPRAR!
-                </div>
-                <h4 className="text-lg font-extrabold text-[#1F1F1F]">Selecciona tu Entrada</h4>
-                <p className="text-xs text-gray-600">
-                  Tienes 5 minutos para completar tu reserva antes de que el pase expire.
-                </p>
-
-                <div className="text-left space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {SECTORES.map(s => (
-                    <div
-                      key={s.id}
-                      onClick={() => !s.agotadoFull && setSectorSeleccionado(s.id)}
-                      className={`flex justify-between items-center p-2.5 border rounded-sm text-xs cursor-pointer ${
-                        sectorSeleccionado === s.id ? "border-[#D31411] bg-red-50/40" : "hover:border-gray-300"
-                      } ${s.agotadoFull ? "opacity-50 cursor-not-allowed" : ""}`}
-                    >
-                      <div>
-                        <span className="font-bold text-gray-800 block">{s.nombre}</span>
-                        <span className="text-[10px] text-gray-500">{s.tipo}</span>
-                      </div>
-                      <span className="font-extrabold text-[#D31411]">
-                        {s.agotadoFull ? "AGOTADO" : `S/ ${s.full.toFixed(2)}`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setModalCompra(false);
-                    setModalCulqi(true);
-                  }}
-                  className="w-full bg-[#D31411] hover:bg-[#b5100d] text-white font-bold text-xs uppercase py-3 rounded-xs tracking-wider cursor-pointer shadow-md transition-all active:scale-95"
-                >
-                  Continuar al Mapa de Butacas y Pago Culqi
-                </button>
-              </div>
-            )}
+            {renderContenidoModalCompra()}
           </div>
         </div>
       )}
@@ -583,7 +600,7 @@ export default function App() {
             setModalCulqi(false);
             setPaseCompra(null);
             alert("Tu pase de sala de espera venció. Ingresando de nuevo a la cola...");
-            iniciarCompra();
+            void iniciarCompra();
           }}
         />
       )}
