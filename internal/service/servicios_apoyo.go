@@ -7,8 +7,11 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -59,17 +62,21 @@ type TokenTarjeta struct {
 }
 
 type PasarelaSimulada struct {
-	mu         sync.Mutex
-	tokens     map[string]TokenTarjeta
-	cargos     map[string]map[string]any
-	latenciaMs int
+	mu             sync.Mutex
+	tokens         map[string]TokenTarjeta
+	cargos         map[string]map[string]any
+	latenciaMs     int
+	culqiSecretKey string
+	httpClient     *http.Client
 }
 
-func NuevaPasarela(latenciaMs int) *PasarelaSimulada {
+func NuevaPasarela(latenciaMs int, culqiSecretKey string) *PasarelaSimulada {
 	return &PasarelaSimulada{
-		tokens:     make(map[string]TokenTarjeta),
-		cargos:     make(map[string]map[string]any),
-		latenciaMs: latenciaMs,
+		tokens:         make(map[string]TokenTarjeta),
+		cargos:         make(map[string]map[string]any),
+		latenciaMs:     latenciaMs,
+		culqiSecretKey: culqiSecretKey,
+		httpClient:     &http.Client{Timeout: 10 * time.Second},
 	}
 }
 

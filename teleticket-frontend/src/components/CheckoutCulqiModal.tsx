@@ -1,12 +1,29 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, type SubmitEvent } from "react";
 import type { AsientoBackend, ReservaActiva, EntradaGenerada } from "../types/compra";
 
 interface Props {
-  eventoId: number;
-  pase: string | null;
-  onCerrar: () => void;
-  onExpirarPase: () => void;
+  readonly eventoId: number;
+  readonly pase: string | null;
+  readonly onCerrar: () => void;
+  readonly onExpirarPase: () => void;
 }
+
+declare global {
+  interface Window {
+    Culqi?: {
+      publicKey: string;
+      settings: (opts: { title: string; currency: string; description: string; amount: number }) => void;
+      options: (opts: Record<string, unknown>) => void;
+      open: () => void;
+      close: () => void;
+      token?: { id: string };
+      error?: { user_message: string; merchant_message: string };
+    };
+    culqi?: () => void;
+  }
+}
+
+const CULQI_PUBLIC_KEY = "pk_live_cqeIUMjPyHVgpBcx";
 
 export default function CheckoutCulqiModal({
   eventoId,
@@ -77,8 +94,10 @@ export default function CheckoutCulqiModal({
   };
 
   useEffect(() => {
-    cargarAsientos();
-    const interval = setInterval(cargarAsientos, 6000);
+    void cargarAsientos();
+    const interval = setInterval(() => {
+      void cargarAsientos();
+    }, 6000);
     return () => clearInterval(interval);
   }, [eventoId]);
 
@@ -91,12 +110,112 @@ export default function CheckoutCulqiModal({
       if (segs <= 0) {
         setReserva(null);
         setMensajeError("El tiempo de reserva expiró. El asiento fue liberado.");
-        cargarAsientos();
+        void cargarAsientos();
         clearInterval(interval);
       }
     }, 1000);
     return () => clearInterval(interval);
   }, [reserva]);
+
+  // Función común para cobrar el token (sea de Culqi Checkout o simulado)
+  const procesarTokenEnBackend = async (tokenId: string, compradorNom: string, compradorEmail: string, asientoId: number) => {
+    setProcesandoPago(true);
+    setMensajeError(null);
+    try {
+      const pagoRes = await fetch("/api/pagos", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({
+          asiento_id: asientoId,
+          comprador: compradorNom,
+          email: compradorEmail,
+          token_pago: tokenId,
+        }),
+      });
+
+      if (pagoRes.status === 403) {
+        onExpirarPase();
+        return;
+      }
+
+      if (!pagoRes.ok) {
+        const pagoErr = await pagoRes.json().catch(() => ({}));
+        throw new Error(pagoErr.detail || "Error al procesar el pago con Culqi");
+      }
+
+      const orden = await pagoRes.json();
+
+      const entradaRes = await fetch(`/api/entradas/${orden.codigo}?email=${encodeURIComponent(compradorEmail)}`);
+      if (entradaRes.ok) {
+        const ticket = await entradaRes.json();
+        setEntradaEmitida(ticket);
+      } else {
+        setEntradaEmitida({
+          codigo: orden.codigo,
+          evento: "PAULO LONDRA · NEXT ROUNDS TOUR 2026",
+          lugar: "Estadio Nacional · Lima",
+          fecha: "2026-08-29",
+          zona: "CAMPO A",
+          asiento: reserva ? reserva.etiqueta : "ASIENTO",
+          comprador: compradorNom,
+          monto: orden.monto,
+          tarjeta_ultimos4: orden.tarjeta ? orden.tarjeta.slice(-4) : "----",
+          qr: `<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#000"/></svg>`,
+          qr_texto: `ENTRADA-${orden.codigo}`,
+        });
+      }
+
+      setReserva(null);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setMensajeError(err.message);
+      }
+    } finally {
+      setProcesandoPago(false);
+    }
+  };
+
+  // 3. Configurar Callback Oficial de Culqi Checkout v4
+  useEffect(() => {
+    window.culqi = () => {
+      if (window.Culqi?.token) {
+        const tknId = window.Culqi.token.id;
+        window.Culqi.close();
+        if (reserva) {
+          const nom = form.comprador.trim() || "Cliente Paulo Londra";
+          const em = form.email.trim() || "cliente@ejemplo.com";
+          void procesarTokenEnBackend(tknId, nom, em, reserva.id);
+        }
+      } else if (window.Culqi?.error) {
+        setMensajeError(window.Culqi.error.user_message || "Error en el Checkout de Culqi");
+      }
+    };
+  }, [reserva, form]);
+
+  const abrirCulqiCheckoutModal = () => {
+    if (!reserva) return;
+    if (!window.Culqi) {
+      setMensajeError("Cargando script de Culqi, espera un instante...");
+      return;
+    }
+    window.Culqi.publicKey = CULQI_PUBLIC_KEY;
+    window.Culqi.settings({
+      title: "PAULO LONDRA 2026",
+      currency: "PEN",
+      description: `Entrada Butaca ${reserva.etiqueta}`,
+      amount: Math.round(reserva.precio * 100),
+    });
+    window.Culqi.options({
+      lang: "es",
+      modal: true,
+      style: {
+        bannercolor: "#1F1F1F",
+        buttontext: "#ffffff",
+        maincolor: "#D31411",
+      },
+    });
+    window.Culqi.open();
+  };
 
   // 3. Apartar asiento temporalmente
   const handleReservar = async (asiento: AsientoBackend) => {
@@ -122,7 +241,7 @@ export default function CheckoutCulqiModal({
         precio: asiento.precio,
         hasta: new Date(r.reservado_hasta),
       });
-      cargarAsientos();
+      void cargarAsientos();
     } catch (err: unknown) {
       if (err instanceof Error) {
         setMensajeError(err.message);
@@ -142,11 +261,11 @@ export default function CheckoutCulqiModal({
       // Ignorar si ya expiró
     }
     setReserva(null);
-    cargarAsientos();
+    void cargarAsientos();
   };
 
-  // 5. Tokenizar con Culqi y Confirmar Compra
-  const handlePagarCulqi = async (e: React.FormEvent) => {
+  // 5. Tokenizar y Confirmar Compra mediante formulario directo
+  const handlePagarCulqi = async (e: SubmitEvent) => {
     e.preventDefault();
     if (!reserva) return;
     setProcesandoPago(true);
@@ -158,9 +277,9 @@ export default function CheckoutCulqiModal({
       // Paso 1: Tokenización directa con Culqi API v2 (ISO 25010 - PCI-DSS)
       try {
         const partesVence = form.vencimiento.split("/");
-        const mes = partesVence[0]?.trim();
-        let anio = partesVence[1]?.trim() || "";
-        if (anio.length === 2) anio = "20" + anio;
+        const mes = parseInt(partesVence[0]?.trim() || "0", 10);
+        let anio = parseInt(partesVence[1]?.trim() || "0", 10);
+        if (anio < 100) anio = 2000 + anio;
         const numLimpio = form.numero.replace(/\s+/g, "");
 
         const culqiTokenRes = await fetch("https://api.culqi.com/v2/tokens", {
@@ -257,12 +376,19 @@ export default function CheckoutCulqiModal({
       if (err instanceof Error) {
         setMensajeError(err.message);
       }
-    } finally {
       setProcesandoPago(false);
     }
   };
 
-  // Formato mm:ss
+  const getClaseAsiento = (esMio: boolean, ocupado: boolean) => {
+    if (esMio) {
+      return "bg-green-600 text-white shadow-md ring-2 ring-green-300";
+    }
+    if (ocupado) {
+      return "bg-gray-300 text-gray-400 cursor-not-allowed";
+    }
+    return "bg-amber-100 text-amber-900 border border-amber-400 hover:bg-amber-500 hover:text-white";
+  };
   const formatTiempo = (segundos: number) => {
     const m = Math.floor(segundos / 60);
     const s = segundos % 60;
@@ -394,15 +520,9 @@ export default function CheckoutCulqiModal({
                               <button
                                 key={a.id}
                                 disabled={ocupado || (reserva !== null && !esMio)}
-                                onClick={() => handleReservar(a)}
+                                onClick={() => void handleReservar(a)}
                                 title={`Fila ${a.fila}, Butaca ${a.numero} - S/ ${a.precio}`}
-                                className={`w-7 h-7 text-[10px] font-black rounded-xs transition-all ${
-                                  esMio
-                                    ? "bg-green-600 text-white shadow-md ring-2 ring-green-300"
-                                    : ocupado
-                                    ? "bg-gray-300 text-gray-400 cursor-not-allowed"
-                                    : "bg-amber-100 text-amber-900 border border-amber-400 hover:bg-amber-500 hover:text-white"
-                                }`}
+                                className={`w-7 h-7 text-[10px] font-black rounded-xs transition-all ${getClaseAsiento(esMio, ocupado)}`}
                               >
                                 {a.numero}
                               </button>
@@ -460,10 +580,11 @@ export default function CheckoutCulqiModal({
 
                   <form onSubmit={handlePagarCulqi} className="space-y-3">
                     <div>
-                      <label className="text-[10px] font-bold text-gray-600 uppercase block mb-1">
+                      <label htmlFor="culqi-comprador" className="text-[10px] font-bold text-gray-600 uppercase block mb-1">
                         Nombre del Titular
                       </label>
                       <input
+                        id="culqi-comprador"
                         required
                         type="text"
                         placeholder="Ej. Juan Pérez"
@@ -474,10 +595,11 @@ export default function CheckoutCulqiModal({
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-gray-600 uppercase block mb-1">
+                      <label htmlFor="culqi-email" className="text-[10px] font-bold text-gray-600 uppercase block mb-1">
                         Correo para el E-Ticket
                       </label>
                       <input
+                        id="culqi-email"
                         required
                         type="email"
                         placeholder="correo@ejemplo.com"
@@ -488,10 +610,11 @@ export default function CheckoutCulqiModal({
                     </div>
 
                     <div>
-                      <label className="text-[10px] font-bold text-gray-600 uppercase block mb-1">
+                      <label htmlFor="culqi-tarjeta" className="text-[10px] font-bold text-gray-600 uppercase block mb-1">
                         Número de Tarjeta (Culqi)
                       </label>
                       <input
+                        id="culqi-tarjeta"
                         required
                         type="text"
                         maxLength={19}
@@ -504,10 +627,11 @@ export default function CheckoutCulqiModal({
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-[10px] font-bold text-gray-600 uppercase block mb-1">
+                        <label htmlFor="culqi-vencimiento" className="text-[10px] font-bold text-gray-600 uppercase block mb-1">
                           Vencimiento
                         </label>
                         <input
+                          id="culqi-vencimiento"
                           required
                           type="text"
                           placeholder="MM/AA"
@@ -518,10 +642,11 @@ export default function CheckoutCulqiModal({
                         />
                       </div>
                       <div>
-                        <label className="text-[10px] font-bold text-gray-600 uppercase block mb-1">
+                        <label htmlFor="culqi-cvv" className="text-[10px] font-bold text-gray-600 uppercase block mb-1">
                           CVV
                         </label>
                         <input
+                          id="culqi-cvv"
                           required
                           type="password"
                           maxLength={4}
@@ -535,14 +660,26 @@ export default function CheckoutCulqiModal({
 
                     <div className="pt-2 space-y-2">
                       <button
+                        type="button"
+                        onClick={abrirCulqiCheckoutModal}
+                        disabled={procesandoPago}
+                        className="w-full bg-[#1F1F1F] hover:bg-black text-white font-extrabold text-xs uppercase py-3 rounded-xs shadow-md transition-all flex items-center justify-center gap-2 border border-gray-700 cursor-pointer"
+                      >
+                        <svg className="w-4 h-4 text-emerald-400" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        <span>Abrir Culqi Checkout Oficial</span>
+                      </button>
+
+                      <button
                         type="submit"
                         disabled={procesandoPago}
-                        className="w-full bg-[#00A859] hover:bg-[#008f4c] text-white font-extrabold text-xs uppercase py-3 rounded-xs shadow-md transition-all flex items-center justify-center gap-2"
+                        className="w-full bg-[#00A859] hover:bg-[#008f4c] text-white font-extrabold text-xs uppercase py-2.5 rounded-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         {procesandoPago ? (
-                          <span>Procesando pago con Culqi...</span>
+                          <span>Procesando pago...</span>
                         ) : (
-                          <span>Pagar S/ {reserva.precio.toFixed(2)} con Culqi</span>
+                          <span>Pagar S/ {reserva.precio.toFixed(2)} con Tarjeta Directa</span>
                         )}
                       </button>
 
@@ -559,7 +696,7 @@ export default function CheckoutCulqiModal({
                 </div>
               ) : (
                 <div className="border border-dashed border-gray-300 rounded-md p-6 text-center space-y-2 text-gray-500">
-                  <svg className="w-10 h-10 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-10 h-10 mx-auto text-gray-400" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
                   </svg>
                   <h4 className="font-bold text-sm text-gray-700">Elige una butaca libre</h4>
