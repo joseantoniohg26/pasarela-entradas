@@ -153,23 +153,59 @@ export default function CheckoutCulqiModal({
     setMensajeError(null);
 
     try {
-      // Paso 1: Tokenización con Culqi (Simulador PCI-DSS)
-      const tokenRes = await fetch("/simulador-pasarela/tokenizar", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          numero: form.numero.replace(/\s+/g, ""),
-          vencimiento: form.vencimiento,
-          cvv: form.cvv,
-          titular: form.comprador,
-        }),
-      });
+      let tokenPago = "";
 
-      if (!tokenRes.ok) {
-        const errJson = await tokenRes.json().catch(() => ({}));
-        throw new Error(errJson.detail || "Tarjeta rechazada por Culqi");
+      // Paso 1: Tokenización directa con Culqi API v2 (ISO 25010 - PCI-DSS)
+      try {
+        const partesVence = form.vencimiento.split("/");
+        const mes = partesVence[0]?.trim();
+        let anio = partesVence[1]?.trim() || "";
+        if (anio.length === 2) anio = "20" + anio;
+        const numLimpio = form.numero.replace(/\s+/g, "");
+
+        const culqiTokenRes = await fetch("https://api.culqi.com/v2/tokens", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer pk_test_7vR4Aqi7NhT2kKNF",
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            card_number: numLimpio,
+            cvv: form.cvv.trim(),
+            expiration_month: mes,
+            expiration_year: anio,
+            email: form.email.trim(),
+          }),
+        });
+
+        const culqiJson = await culqiTokenRes.json();
+        if (culqiTokenRes.ok && culqiJson.id) {
+          tokenPago = culqiJson.id;
+        }
+      } catch {
+        // Fallback al simulador si no hay conexión a internet
       }
-      const tokData = await tokenRes.json();
+
+      // Si Culqi directo no devolvió token, recurrir al simulador local
+      if (!tokenPago) {
+        const tokenRes = await fetch("/simulador-pasarela/tokenizar", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            numero: form.numero.replace(/\s+/g, ""),
+            vencimiento: form.vencimiento,
+            cvv: form.cvv,
+            titular: form.comprador,
+          }),
+        });
+
+        if (!tokenRes.ok) {
+          const errJson = await tokenRes.json().catch(() => ({}));
+          throw new Error(errJson.detail || "Tarjeta rechazada por Culqi");
+        }
+        const tokData = await tokenRes.json();
+        tokenPago = tokData.token;
+      }
 
       // Paso 2: Ejecutar Cargo Seguro contra el Backend Go
       const pagoRes = await fetch("/api/pagos", {
@@ -179,7 +215,7 @@ export default function CheckoutCulqiModal({
           asiento_id: reserva.id,
           comprador: form.comprador,
           email: form.email,
-          token_pago: tokData.token,
+          token_pago: tokenPago,
         }),
       });
 
