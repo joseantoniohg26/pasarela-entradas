@@ -1,26 +1,4 @@
 // Prueba de carga con k6 (RNF-01 y RNF-02).
-//
-// Cada usuario virtual hace el recorrido completo de un comprador: entra a la
-// sala de espera, espera su turno, reserva una butaca y la libera. Lo que se
-// mide es el tiempo de la reserva, que es lo que exige el RNF-02 (<= 300 ms).
-//
-// Uso, desde Ubuntu:
-//     k6 run -e BASE=http://10.0.2.2:8000 pruebas/carga.js
-//     k6 run -e BASE=http://10.0.2.2:8000 -e VUS=200 pruebas/carga.js
-//     k6 run --out json=resultados/k6.json -e BASE=http://10.0.2.2:8000 pruebas/carga.js
-//
-// Requisitos:
-//     - ANTIBOTS=0 en el .env, porque todas las peticiones salen de una IP.
-//     - Aforo suficiente: scripts/iniciar_bd.py --reiniciar --filas 26 --por-fila 40
-//
-// Instalar k6 en Ubuntu 24.04:
-//     sudo gpg -k
-//     sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
-//          --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-//     echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
-//          | sudo tee /etc/apt/sources.list.d/k6.list
-//     sudo apt update && sudo apt install k6
-
 import http from "k6/http";
 import { check, sleep, fail } from "k6";
 import { Trend, Counter } from "k6/metrics";
@@ -29,8 +7,6 @@ const BASE = __ENV.BASE || "http://127.0.0.1:8000";
 const VUS = Number(__ENV.VUS || 100);
 const EVENTO = Number(__ENV.EVENTO || 1);
 
-// Métricas propias: el tiempo de la reserva se mira aparte del resto de las
-// peticiones, porque es el único que el RNF-02 limita.
 const reservaMs = new Trend("reserva_ms", true);
 const salaMs = new Trend("sala_espera_ms", true);
 const reservasOk = new Counter("reservas_ok");
@@ -52,9 +28,7 @@ export const options = {
     },
   },
   thresholds: {
-    // Este es el RNF-02: el 95 % de las reservas por debajo de 300 ms
     reserva_ms: ["p(95)<300"],
-    // Y que el recorrido no se rompa por el camino
     checks: ["rate>0.98"],
   },
 };
@@ -68,52 +42,49 @@ export function setup() {
 
   const asientos = http.get(`${BASE}/api/eventos/${EVENTO}/asientos`).json();
   const libres = asientos.filter((a) => a.estado === "libre").map((a) => a.id);
-  console.log(`modo=${cfg.json().modo}  asientos libres=${libres.length}`);
-  if (libres.length < 50) {
-    fail("Quedan muy pocos asientos libres. Reinicia la base con scripts/iniciar_bd.py --reiniciar");
+  if (libres.length < VUS) {
+    fail(`Aforo insuficiente para ${VUS} VUs: solo hay ${libres.length} asientos libres.`);
   }
-  return { modo: cfg.json().modo, libres };
+
+  return { modo: cfg.json().modo, asientosLibres: libres };
 }
 
-// Devuelve las cabeceras que identifican a este comprador.
-// En modo sala hay que pasar por la cola; en los otros basta un identificador.
-function identificarse(modo) {
-  if (modo !== "sala") {
-    return { "Content-Type": "application/json", "X-Sesion": `k6-${__VU}-${__ITER}-${Date.now()}` };
-  }
-
-  const inicio = Date.now();
-  const entrada = http.post(`${BASE}/api/sala/entrar`, null, json);
-  if (entrada.status !== 200) {
-    if (entrada.status === 429) bloqueos.add(1);
+function pasarSalaEspera() {
+  const t0 = Date.now();
+  const rEntrar = http.post(`${BASE}/api/sala/entrar`, null, json);
+  if (rEntrar.status !== 200) {
+    if (rEntrar.status === 429) bloqueos.add(1);
     return null;
   }
-  const ticket = entrada.json().ticket;
+  const ticket = rEntrar.json().ticket;
 
-  // Espera su turno. El tope de 60 vueltas evita quedarse colgado si el
-  // servidor se cae en medio de la prueba.
-  for (let vuelta = 0; vuelta < 60; vuelta++) {
-    const estado = http.get(`${BASE}/api/sala/${ticket}`, json);
-    if (estado.status === 200 && estado.json().estado === "admitido") {
-      salaMs.add(Date.now() - inicio);
-      return { "Content-Type": "application/json", "X-Pase": estado.json().pase };
-    }
+  for (let intento = 0; intento < 60; intento++) {
     sleep(0.5);
+    const rEstado = http.get(`${BASE}/api/sala/${ticket}`);
+    if (rEstado.status === 200 && rEstado.json().estado === "admitido") {
+      salaMs.add(Date.now() - t0);
+      return rEstado.json().pase;
+    }
   }
   return null;
 }
 
-export default function (datos) {
-  const cabeceras = identificarse(datos.modo);
-  if (!cabeceras) {
-    check(null, { "consiguió identificarse": () => false });
-    return;
+export default function (data) {
+  let pase = null;
+  if (data.modo === "sala") {
+    pase = pasarSalaEspera();
+    if (!pase) return;
   }
 
-  // Cada usuario virtual apunta a una butaca distinta, para medir el tiempo de
-  // la reserva y no el de la pelea por una misma butaca (eso lo mide
-  // pruebas/sobreventa.py y pruebas/latencia.py --mismo-asiento).
-  const asiento = datos.libres[Math.floor(Math.random() * datos.libres.length)];
+  const cabeceras = { "Content-Type": "application/json" };
+  if (data.modo === "sala") {
+    cabeceras["X-Pase"] = pase;
+  } else {
+    cabeceras["X-Sesion"] = `vu-${__VU}-${__ITER}`;
+  }
+
+  const idx = (__VU * 1000 + __ITER) % data.asientosLibres.length;
+  const asiento = data.asientosLibres[idx];
 
   const reserva = http.post(
     `${BASE}/api/reservas`,
@@ -128,7 +99,6 @@ export default function (datos) {
   if (reserva.status === 201) {
     reservaMs.add(reserva.timings.duration);
     reservasOk.add(1);
-    // Se libera para que el aforo no se agote a mitad de la prueba
     http.del(`${BASE}/api/reservas/${asiento}`, null, { headers: cabeceras });
   } else if (reserva.status === 409) {
     reservasConflicto.add(1);
@@ -156,5 +126,8 @@ export function handleSummary(datos) {
   }
   salida += "=".repeat(60) + "\n";
 
-  return { stdout: salida };
+  return {
+    stdout: salida,
+    "resultados/k6.json": JSON.stringify(datos, null, 2),
+  };
 }
