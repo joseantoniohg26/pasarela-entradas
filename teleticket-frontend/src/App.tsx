@@ -180,14 +180,16 @@ export default function App() {
         </div>
       </header>
 
-      {/* 2. Banner Principal / Hero Teleticket (Imagen de Paulo Londra a pantalla completa) */}
-      <section id="page-top" className="relative bg-[#000000] text-white flex justify-center border-b border-neutral-800">
-        <div className="w-full max-w-4xl mx-auto">
-          <img
-            src="/banner-londra.jpg"
-            alt="Paulo Londra - Next Rounds Tour 2026 - Estadio Nacional Lima"
-            className="w-full h-auto object-contain block drop-shadow-2xl"
-          />
+      {/* 2. Banner Principal / Hero Teleticket (Imagen a ancho total responsive) */}
+      <section id="page-top" className="w-full bg-[#000000] text-white overflow-hidden">
+        <div className="w-full">
+          <div className="relative w-full text-center">
+            <img
+              src="/banner-londra.jpg"
+              alt="Paulo Londra - Next Rounds Tour 2026 - Estadio Nacional Lima"
+              className="w-full h-auto block object-cover md:object-contain mx-auto max-h-[85vh] sm:max-h-none"
+            />
+          </div>
         </div>
       </section>
 
