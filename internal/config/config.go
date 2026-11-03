@@ -47,7 +47,7 @@ func Cargar() *Config {
 		ModoReserva:         modo,
 		ReservaMinutos:      getEnvInt("RESERVA_MINUTOS", 5),
 		PaseMinutos:         getEnvInt("PASE_MINUTOS", 15),
-		MaxEntradasCliente:  getEnvInt("MAX_ENTRADAS_POR_CLIENTE", 4),
+		MaxEntradasCliente:  getEnvInt("MAX_ENTRADAS_POR_CLIENTE", 6),
 		SalaAdmitidosPorSeg: getEnvInt("SALA_ADMITIDOS_POR_SEG", 50),
 		Antibots:            getEnv("ANTIBOTS", "1") == "1",
 		LimitePeticiones:    getEnvInt("LIMITE_PETICIONES", 60),

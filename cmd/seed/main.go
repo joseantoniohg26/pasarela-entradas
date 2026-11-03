@@ -14,16 +14,11 @@ import (
 	"pasarela-entradas/internal/config"
 )
 
-type EventoSeed struct {
-	Nombre     string
-	Lugar      string
-	Fecha      time.Time
-	AficheURL  string
-	Filas      int
-	PorFila    int
-	PrecioVIP  float64
-	PrecioPref float64
-	PrecioGen  float64
+type SectorSeed struct {
+	FilaPrefijo string
+	Zona        string
+	Precio      float64
+	Cantidad    int
 }
 
 func reiniciarEsquema(ctx context.Context, pool *pgxpool.Pool) {
@@ -39,60 +34,45 @@ func reiniciarEsquema(ctx context.Context, pool *pgxpool.Pool) {
 	log.Println("Esquema inicializado correctamente.")
 }
 
-func sembrarAsientos(ctx context.Context, pool *pgxpool.Pool, ev EventoSeed, eventoID int) {
-	log.Printf("Insertando asientos para %s (Aforo: %d)...", ev.Nombre, ev.Filas*ev.PorFila)
-	batch := &pgx.Batch{}
+func sembrarAsientosPauloLondra(ctx context.Context, pool *pgxpool.Pool, eventoID int) {
+	sectores := []SectorSeed{
+		{FilaPrefijo: "A", Zona: "Campo A", Precio: 270.00, Cantidad: 40},
+		{FilaPrefijo: "B", Zona: "Campo B", Precio: 125.00, Cantidad: 40},
+		{FilaPrefijo: "OCC-1", Zona: "Occidente 1", Precio: 185.00, Cantidad: 30},
+		{FilaPrefijo: "OCC-2", Zona: "Occidente 2", Precio: 160.00, Cantidad: 30},
+		{FilaPrefijo: "ORI-1", Zona: "Oriente 1", Precio: 185.00, Cantidad: 30},
+		{FilaPrefijo: "ORI-2", Zona: "Oriente 2", Precio: 160.00, Cantidad: 30},
+		{FilaPrefijo: "NORTE", Zona: "Tribuna Norte", Precio: 80.00, Cantidad: 40},
+	}
 
-	for f := 0; f < ev.Filas; f++ {
-		letraFila := string(rune('A' + f))
-		for num := 1; num <= ev.PorFila; num++ {
-			zona, precio := determinarZonaYPrecio(f, ev)
+	batch := &pgx.Batch{}
+	total := 0
+
+	for _, s := range sectores {
+		for n := 1; n <= s.Cantidad; n++ {
 			batch.Queue(`
 				INSERT INTO asientos (evento_id, fila, numero, precio, zona, estado)
-				VALUES ($1, $2, $3, $4, $5, 'libre')`,
-				eventoID, letraFila, num, precio, zona)
+				VALUES ($1, $2, $3, $4, $5, 'libre')
+				ON CONFLICT DO NOTHING`,
+				eventoID, s.FilaPrefijo, n, s.Precio, s.Zona)
+			total++
 		}
 	}
 
 	br := pool.SendBatch(ctx, batch)
 	if err := br.Close(); err != nil {
-		log.Fatalf("Error insertando lote de asientos: %v", err)
+		log.Fatalf("Error insertando asientos de Paulo Londra: %v", err)
 	}
-}
-
-func determinarZonaYPrecio(fila int, ev EventoSeed) (string, float64) {
-	if fila < 2 {
-		return "VIP", ev.PrecioVIP
-	}
-	if fila < 5 {
-		return "Preferencial", ev.PrecioPref
-	}
-	return "General", ev.PrecioGen
-}
-
-func sembrarEventos(ctx context.Context, pool *pgxpool.Pool, eventos []EventoSeed) {
-	for _, ev := range eventos {
-		var eventoID int
-		err := pool.QueryRow(ctx, `
-			INSERT INTO eventos (nombre, lugar, fecha, afiche_url)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id`, ev.Nombre, ev.Lugar, ev.Fecha, ev.AficheURL).Scan(&eventoID)
-		if err != nil {
-			log.Fatalf("Error insertando evento: %v", err)
-		}
-		sembrarAsientos(ctx, pool, ev, eventoID)
-	}
+	log.Printf("Insertadas %d butacas en los 7 sectores oficiales.", total)
 }
 
 func main() {
-	reiniciar := flag.Bool("reiniciar", false, "Borra las tablas existentes y las recrea")
-	filasExtra := flag.Int("filas", 10, "Número de filas para el evento principal")
-	porFilaExtra := flag.Int("por-fila", 20, "Asientos por fila para el evento principal")
+	reiniciar := flag.Bool("reiniciar", true, "Reinicia esquema y carga únicamente Paulo Londra")
 	flag.Parse()
 
 	cfg := config.Cargar()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
@@ -105,51 +85,25 @@ func main() {
 		reiniciarEsquema(ctx, pool)
 	}
 
-	var count int
-	_ = pool.QueryRow(ctx, "SELECT count(*) FROM eventos").Scan(&count)
-	if count > 0 && !*reiniciar {
-		log.Println("La base de datos ya contiene eventos. Usa -reiniciar si deseas sobreescribir.")
-		return
+	// Asegurar que solo exista Paulo Londra
+	_, _ = pool.Exec(ctx, "DELETE FROM eventos WHERE id <> 1")
+
+	var eventoID int
+	query := `
+		INSERT INTO eventos (id, nombre, artista, categoria, lugar, fecha, afiche_url, imagen, descripcion)
+		VALUES (1, 'PAULO LONDRA · TOUR 2026', 'Paulo Londra', 'Urbano / Trap', 'Estadio Nacional, Lima', '2026-08-29 21:00:00-05', '/img/concierto-internacional.svg', 'concierto-internacional.svg', 'El deseo de miles de fanáticos se hace realidad: Paulo Londra en el Estadio Nacional este sábado 29 de agosto de 2026. Organiza: CONCERTS SPORTS AEI10 S.A.C. Preventa con hasta 15% de descuento Interbank. Máximo 6 entradas por cliente.')
+		ON CONFLICT (id) DO UPDATE SET
+			nombre = EXCLUDED.nombre,
+			artista = EXCLUDED.artista,
+			categoria = EXCLUDED.categoria,
+			lugar = EXCLUDED.lugar,
+			fecha = EXCLUDED.fecha,
+			descripcion = EXCLUDED.descripcion
+		RETURNING id`
+	if err := pool.QueryRow(ctx, query).Scan(&eventoID); err != nil {
+		log.Fatalf("Error asegurando evento Paulo Londra: %v", err)
 	}
 
-	eventos := []EventoSeed{
-		{
-			Nombre:     "BTS · WORLD TOUR 'LIGHTS' LIMA 2026",
-			Lugar:      "Estadio Nacional, Lima",
-			Fecha:      time.Date(2026, 12, 15, 20, 0, 0, 0, time.Local),
-			AficheURL:  "/img/concierto-internacional.svg",
-			Filas:      *filasExtra,
-			PorFila:    *porFilaExtra,
-			PrecioVIP:  450.0,
-			PrecioPref: 280.0,
-			PrecioGen:  150.0,
-		},
-		{
-			Nombre:     "Grupo 5 · 52 Años de Oro",
-			Lugar:      "Estadio San Marcos, Lima",
-			Fecha:      time.Date(2026, 12, 28, 21, 0, 0, 0, time.Local),
-			AficheURL:  "/img/grupo5.jpg",
-			Filas:      10,
-			PorFila:    20,
-			PrecioVIP:  300.0,
-			PrecioPref: 180.0,
-			PrecioGen:  95.0,
-		},
-		{
-			Nombre:     "Libido en Concierto: La Reunión",
-			Lugar:      "Arena 1, Costa Verde",
-			Fecha:      time.Date(2027, 1, 20, 20, 30, 0, 0, time.Local),
-			AficheURL:  "/img/libido.jpg",
-			Filas:      8,
-			PorFila:    15,
-			PrecioVIP:  250.0,
-			PrecioPref: 150.0,
-			PrecioGen:  80.0,
-		},
-	}
-
-	sembrarEventos(ctx, pool, eventos)
-	log.Println("Base de datos inicializada y poblada con éxito.")
+	sembrarAsientosPauloLondra(ctx, pool, eventoID)
+	log.Println("Cartelera configurada con éxito: Solo Paulo Londra - Estadio Nacional 2026.")
 }
-
-

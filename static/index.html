@@ -1,153 +1,17 @@
 <!doctype html>
 <html lang="es">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Tiquetera · Venta de entradas para eventos masivos</title>
-  <link rel="icon" href="favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="estilos.css">
-</head>
-<body>
-  <header class="cabecera">
-    <a class="marca" href="#/">TIQUE<span>TERA</span></a>
-    <nav class="navegacion">
-      <a href="#/">Cartelera</a>
-      <a href="#/mis-entradas">Mis entradas</a>
-      <a href="admin.html">Administración</a>
-    </nav>
-    <span id="modo" class="modo"></span>
-  </header>
-
-  <p class="aviso-demo">
-    Prototipo académico · Proyecto del curso Calidad Aplicada a los Sistemas de
-    Información (UNAMAD) · Aquí no se venden entradas reales ni se cobran pagos
-  </p>
-
-  <main>
-    <!-- 1. Catálogo de eventos -->
-    <section id="vista-catalogo" hidden>
-      <article id="destacado" class="destacado">
-        <div class="destacado-texto">
-          <span class="etiqueta" id="dest-categoria"></span>
-          <h1 id="dest-nombre"></h1>
-          <p class="destacado-artista" id="dest-artista"></p>
-          <p class="destacado-datos" id="dest-datos"></p>
-          <div class="acciones">
-            <a class="boton" id="dest-comprar">Comprar entradas</a>
-            <a class="boton secundario" id="dest-detalle">Ver detalle</a>
-          </div>
-        </div>
-      </article>
-
-      <h2 class="titulo-seccion">Próximos eventos</h2>
-      <div id="rejilla" class="rejilla"></div>
-    </section>
-
-    <!-- 2. Detalle del evento -->
-    <section id="vista-detalle" class="detalle" hidden></section>
-
-    <!-- 3. Mis entradas -->
-    <section id="vista-entradas" hidden>
-      <nav class="migas">
-        <a href="#/">Cartelera</a>
-        <span class="actual">Mis entradas</span>
-      </nav>
-
-      <div class="entradas-cabecera">
-        <div>
-          <h1>Mis entradas</h1>
-          <p class="nota">Las compras hechas desde este navegador. Presenta el QR en la puerta.</p>
-        </div>
-        <form id="form-buscar" class="buscar">
-          <input name="codigo" placeholder="ORD-XXXXXXXX" required>
-          <input name="email" type="email" placeholder="Correo de la compra" required>
-          <button type="submit">Buscar</button>
-        </form>
-      </div>
-
-      <p id="mensaje-entradas" class="mensaje" role="status"></p>
-      <div id="lista-entradas" class="lista-entradas"></div>
-    </section>
-
-    <!-- 4. Sala de espera -->
-    <section id="vista-sala" class="tarjeta sala" hidden>
-      <span class="pulso"></span>
-      <h2>Estás en la sala de espera</h2>
-      <p>Hay muchas personas intentando comprar al mismo tiempo. Te dejaremos pasar en orden de llegada.</p>
-      <div class="posicion">
-        <span>Personas delante de ti</span>
-        <strong id="sala-posicion">–</strong>
-      </div>
-      <div class="barra"><div id="sala-barra"></div></div>
-      <p class="nota">No cierres ni recargues esta página.</p>
-    </section>
-
-    <!-- 5. Selección de asiento y pago -->
-    <section id="vista-mapa" hidden>
-      <nav class="migas">
-        <a href="#/">Cartelera</a>
-        <span id="miga-evento"></span>
-        <span class="actual">Elegir asiento</span>
-      </nav>
-
-      <div class="mapa-contenedor">
-        <div class="mapa">
-          <div class="escenario">ESCENARIO</div>
-          <div id="asientos" class="asientos"></div>
-          <ul class="leyenda">
-            <li><i class="z-vip"></i>VIP S/ 350</li>
-            <li><i class="z-pref"></i>Preferencial S/ 220</li>
-            <li><i class="z-gen"></i>General S/ 120</li>
-            <li><i class="ocupado"></i>No disponible</li>
-            <li><i class="mio"></i>Tu reserva</li>
-          </ul>
-        </div>
-
-        <aside class="panel tarjeta">
-          <div id="panel-vacio">
-            <h2>Elige tu asiento</h2>
-            <p>Toca un asiento libre en el mapa. Lo apartamos por <span id="minutos-reserva">5</span> minutos mientras pagas.</p>
-          </div>
-
-          <div id="panel-reserva" hidden>
-            <h2>Asiento <span id="res-asiento"></span></h2>
-            <p class="precio">S/ <span id="res-precio"></span></p>
-            <p class="reloj">Tiempo para pagar: <strong id="res-reloj">--:--</strong></p>
-
-            <form id="form-pago" autocomplete="off">
-              <label>Nombre completo<input name="comprador" required minlength="3"></label>
-              <label>Correo<input name="email" type="email" required></label>
-              <label>Número de tarjeta<input name="numero" inputmode="numeric" required placeholder="4111 1111 1111 1111"></label>
-              <div class="fila-2">
-                <label>Vence<input name="vencimiento" required placeholder="MM/AA" pattern="\d{2}/\d{2}"></label>
-                <label>CVV<input name="cvv" required inputmode="numeric" pattern="\d{3,4}"></label>
-              </div>
-              <p class="ayuda">Pasarela Culqi (Pruebas Sandbox). Tarjeta aprobada: 4111 1111 1111 1111 · CVV: 123 · Vence: fecha futura</p>
-              <button type="submit" id="btn-pagar">Pagar</button>
-              <button type="button" id="btn-cancelar" class="secundario">Cancelar reserva</button>
-            </form>
-          </div>
-
-          <div id="panel-ok" hidden>
-            <h2>¡Compra confirmada!</h2>
-            <p>Código de orden</p>
-            <p class="codigo" id="ok-codigo"></p>
-            <p id="ok-detalle"></p>
-            <button type="button" id="btn-ver-entrada">Ver mi entrada con QR</button>
-            <button type="button" id="btn-otra" class="secundario">Comprar otra entrada</button>
-          </div>
-
-          <p id="mensaje" class="mensaje" role="status"></p>
-        </aside>
-      </div>
-    </section>
-  </main>
-
-  <footer class="pie">
-    Prototipo académico · Caso 2: pasarela de pagos para eventos masivos ·
-    Calidad Aplicada a los Sistemas de Información (UNAMAD)
-  </footer>
-
-  <script src="app.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,700&display=swap" rel="stylesheet">
+    <title>PAULO LONDRA EN LIMA 2026 | TELETICKET</title>
+    <script type="module" crossorigin src="/assets/index-uJNnUjyT.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CoJoFTFf.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
