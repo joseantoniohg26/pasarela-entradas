@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"time"
 )
@@ -89,8 +90,10 @@ func (c *CulqiService) Cobrar(ctx context.Context, token string, monto float64, 
 	req.Header.Set("Authorization", "Bearer "+c.llaveSecreta)
 	req.Header.Set("Content-Type", "application/json")
 
+	log.Printf("[CULQI DEBUG] POST %s/charges payload: %s", c.baseURL, string(cuerpoJSON))
 	resp, err := c.clienteHTTP.Do(req)
 	if err != nil {
+		log.Printf("[CULQI DEBUG] HTTP err: %v", err)
 		return nil, fmt.Errorf("fallo de comunicación con pasarela Culqi: %w", err)
 	}
 	defer resp.Body.Close()
@@ -99,6 +102,7 @@ func (c *CulqiService) Cobrar(ctx context.Context, token string, monto float64, 
 	if err != nil {
 		return nil, fmt.Errorf("error al leer respuesta de Culqi: %w", err)
 	}
+	log.Printf("[CULQI DEBUG] Status: %d, Body: %s", resp.StatusCode, string(respBytes))
 
 	var data culqiCargoRespuesta
 	if err := json.Unmarshal(respBytes, &data); err != nil {
