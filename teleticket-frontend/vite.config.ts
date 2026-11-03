@@ -7,6 +7,10 @@ import tailwindcss from "@tailwindcss/vite";
 // reenvía: todo lo que empiece con /api y /img va al servidor de Python.
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  build: {
+    outDir: "../static",
+    emptyOutDir: false,
+  },
   server: {
     port: 5173,
     proxy: {
