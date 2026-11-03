@@ -466,14 +466,14 @@ export default function CheckoutCulqiModal({
                 </div>
               </div>
 
-              {/* QR Renderizado */}
+              {/* QR Renderizado Único con HMAC Criptográfico */}
               <div className="pt-2 flex flex-col items-center justify-center border-t">
                 <div
-                  className="w-36 h-36 flex items-center justify-center p-2 bg-white border border-gray-300 rounded-sm"
-                  dangerouslySetInnerHTML={{ __html: entradaEmitida.qr }}
+                  className="w-40 h-40 flex items-center justify-center p-2 bg-white border-2 border-gray-200 rounded-md shadow-xs overflow-hidden"
+                  dangerouslySetInnerHTML={{ __html: entradaEmitida.qr_svg || entradaEmitida.qr || "" }}
                 />
-                <span className="text-[10px] text-gray-400 pt-1 font-medium">
-                  Presenta este código QR oficial en la puerta del Estadio
+                <span className="text-[10px] text-gray-500 pt-2 font-semibold tracking-tight text-center">
+                  Código QR único e intransferible. Presenta este e-ticket en la puerta del Estadio Nacional.
                 </span>
               </div>
             </div>

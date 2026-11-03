@@ -27,8 +27,9 @@ export interface EntradaGenerada {
   comprador: string;
   monto: number;
   tarjeta_ultimos4: string;
-  qr: string;
-  qr_texto: string;
+  qr?: string;
+  qr_svg?: string;
+  qr_texto?: string;
   usado_en?: string | null;
 }
 
