@@ -300,8 +300,13 @@ export default function CheckoutCulqiModal({
         const culqiJson = await culqiTokenRes.json();
         if (culqiTokenRes.ok && culqiJson.id) {
           tokenPago = culqiJson.id;
+        } else if (culqiJson.user_message || culqiJson.merchant_message) {
+          throw new Error(culqiJson.user_message || culqiJson.merchant_message);
         }
-      } catch {
+      } catch (err: unknown) {
+        if (err instanceof Error && !err.message.includes("fetch")) {
+          throw err;
+        }
         // Fallback al simulador si no hay conexión a internet
       }
 
