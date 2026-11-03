@@ -15,3 +15,4 @@ COPY nginx/nginx.conf /etc/nginx/nginx.conf
 EXPOSE 80 443 8000 8443
 
 CMD ["nginx", "-g", "daemon off;"]
+
