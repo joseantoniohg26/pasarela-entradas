@@ -23,7 +23,7 @@ declare global {
   }
 }
 
-const CULQI_PUBLIC_KEY = "pk_live_cqeIUMjPyHVgpBcx";
+const CULQI_PUBLIC_KEY = "pk_test_7vR4Aqi7NhT2kKNF";
 
 export default function CheckoutCulqiModal({
   eventoId,
