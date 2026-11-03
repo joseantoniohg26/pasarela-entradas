@@ -18,20 +18,20 @@ import (
 )
 
 type TokenTarjeta struct {
-	Numero          string
-	Vencimiento     string
-	Titular         string
-	Marca           string
-	Ultimos4        string
-	CreadoEn        time.Time
-	TarjetaPrueba   bool
+	Numero        string
+	Vencimiento   string
+	Titular       string
+	Marca         string
+	Ultimos4      string
+	CreadoEn      time.Time
+	TarjetaPrueba bool
 }
 
 type PasarelaSimulada struct {
-	mu          sync.Mutex
-	tokens      map[string]TokenTarjeta
-	cargos      map[string]map[string]any
-	latenciaMs  int
+	mu         sync.Mutex
+	tokens     map[string]TokenTarjeta
+	cargos     map[string]map[string]any
+	latenciaMs int
 }
 
 func NuevaPasarela(latenciaMs int) *PasarelaSimulada {
@@ -173,11 +173,11 @@ func (p *PasarelaSimulada) Cobrar(token string, monto float64, descripcion, emai
 // --- Antibots: Limitador por IP (Ventana Deslizante) ---
 
 type LimitadorPeticiones struct {
-	maximo          int
-	ventana         time.Duration
-	mu              sync.Mutex
-	historial       map[string][]time.Time
-	ultimaLimpieza  time.Time
+	maximo         int
+	ventana        time.Duration
+	mu             sync.Mutex
+	historial      map[string][]time.Time
+	ultimaLimpieza time.Time
 }
 
 func NuevoLimitador(maximo, ventanaSeg int) *LimitadorPeticiones {
@@ -312,4 +312,3 @@ func (m *Metricas) Reiniciar() {
 }
 
 var EmailRegex = regexp.MustCompile(`^[^@\s]+@[^@\s]+\.[^@\s]+$`)
-

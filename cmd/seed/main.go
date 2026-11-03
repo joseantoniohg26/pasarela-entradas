@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -16,15 +15,73 @@ import (
 )
 
 type EventoSeed struct {
-	Nombre      string
-	Lugar       string
-	Fecha       time.Time
-	AficheURL   string
-	Filas       int
-	PorFila     int
-	PrecioVIP   float64
-	PrecioPref  float64
-	PrecioGen   float64
+	Nombre     string
+	Lugar      string
+	Fecha      time.Time
+	AficheURL  string
+	Filas      int
+	PorFila    int
+	PrecioVIP  float64
+	PrecioPref float64
+	PrecioGen  float64
+}
+
+func reiniciarEsquema(ctx context.Context, pool *pgxpool.Pool) {
+	log.Println("Reiniciando base de datos...")
+	sqlFile := filepath.Join("sql", "esquema.sql")
+	contenido, err := os.ReadFile(sqlFile)
+	if err != nil {
+		log.Fatalf("Error al leer sql/esquema.sql: %v", err)
+	}
+	if _, err := pool.Exec(ctx, string(contenido)); err != nil {
+		log.Fatalf("Error ejecutando esquema.sql: %v", err)
+	}
+	log.Println("Esquema inicializado correctamente.")
+}
+
+func sembrarAsientos(ctx context.Context, pool *pgxpool.Pool, ev EventoSeed, eventoID int) {
+	log.Printf("Insertando asientos para %s (Aforo: %d)...", ev.Nombre, ev.Filas*ev.PorFila)
+	batch := &pgx.Batch{}
+
+	for f := 0; f < ev.Filas; f++ {
+		letraFila := string(rune('A' + f))
+		for num := 1; num <= ev.PorFila; num++ {
+			zona, precio := determinarZonaYPrecio(f, ev)
+			batch.Queue(`
+				INSERT INTO asientos (evento_id, fila, numero, precio, zona, estado)
+				VALUES ($1, $2, $3, $4, $5, 'libre')`,
+				eventoID, letraFila, num, precio, zona)
+		}
+	}
+
+	br := pool.SendBatch(ctx, batch)
+	if err := br.Close(); err != nil {
+		log.Fatalf("Error insertando lote de asientos: %v", err)
+	}
+}
+
+func determinarZonaYPrecio(fila int, ev EventoSeed) (string, float64) {
+	if fila < 2 {
+		return "VIP", ev.PrecioVIP
+	}
+	if fila < 5 {
+		return "Preferencial", ev.PrecioPref
+	}
+	return "General", ev.PrecioGen
+}
+
+func sembrarEventos(ctx context.Context, pool *pgxpool.Pool, eventos []EventoSeed) {
+	for _, ev := range eventos {
+		var eventoID int
+		err := pool.QueryRow(ctx, `
+			INSERT INTO eventos (nombre, lugar, fecha, afiche_url)
+			VALUES ($1, $2, $3, $4)
+			RETURNING id`, ev.Nombre, ev.Lugar, ev.Fecha, ev.AficheURL).Scan(&eventoID)
+		if err != nil {
+			log.Fatalf("Error insertando evento: %v", err)
+		}
+		sembrarAsientos(ctx, pool, ev, eventoID)
+	}
 }
 
 func main() {
@@ -45,16 +102,7 @@ func main() {
 	defer pool.Close()
 
 	if *reiniciar {
-		log.Println("Reiniciando base de datos...")
-		sqlFile := filepath.Join("sql", "esquema.sql")
-		contenido, err := os.ReadFile(sqlFile)
-		if err != nil {
-			log.Fatalf("Error al leer sql/esquema.sql: %v", err)
-		}
-		if _, err := pool.Exec(ctx, string(contenido)); err != nil {
-			log.Fatalf("Error ejecutando esquema.sql: %v", err)
-		}
-		log.Println("Esquema inicializado correctamente.")
+		reiniciarEsquema(ctx, pool)
 	}
 
 	var count int
@@ -66,81 +114,42 @@ func main() {
 
 	eventos := []EventoSeed{
 		{
-			Nombre:      "BTS · WORLD TOUR 'LIGHTS' LIMA 2026",
-			Lugar:       "Estadio Nacional, Lima",
-			Fecha:       time.Date(2026, 12, 15, 20, 0, 0, 0, time.Local),
-			AficheURL:   "/img/concierto-internacional.svg",
-			Filas:       *filasExtra,
-			PorFila:     *porFilaExtra,
-			PrecioVIP:   450.0,
-			PrecioPref:  280.0,
-			PrecioGen:   150.0,
+			Nombre:     "BTS · WORLD TOUR 'LIGHTS' LIMA 2026",
+			Lugar:      "Estadio Nacional, Lima",
+			Fecha:      time.Date(2026, 12, 15, 20, 0, 0, 0, time.Local),
+			AficheURL:  "/img/concierto-internacional.svg",
+			Filas:      *filasExtra,
+			PorFila:    *porFilaExtra,
+			PrecioVIP:  450.0,
+			PrecioPref: 280.0,
+			PrecioGen:  150.0,
 		},
 		{
-			Nombre:      "Grupo 5 · 52 Años de Oro",
-			Lugar:       "Estadio San Marcos, Lima",
-			Fecha:       time.Date(2026, 12, 28, 21, 0, 0, 0, time.Local),
-			AficheURL:   "/img/grupo5.jpg",
-			Filas:       10,
-			PorFila:     20,
-			PrecioVIP:   300.0,
-			PrecioPref:  180.0,
-			PrecioGen:   95.0,
+			Nombre:     "Grupo 5 · 52 Años de Oro",
+			Lugar:      "Estadio San Marcos, Lima",
+			Fecha:      time.Date(2026, 12, 28, 21, 0, 0, 0, time.Local),
+			AficheURL:  "/img/grupo5.jpg",
+			Filas:      10,
+			PorFila:    20,
+			PrecioVIP:  300.0,
+			PrecioPref: 180.0,
+			PrecioGen:  95.0,
 		},
 		{
-			Nombre:      "Libido en Concierto: La Reunión",
-			Lugar:       "Arena 1, Costa Verde",
-			Fecha:       time.Date(2027, 1, 20, 20, 30, 0, 0, time.Local),
-			AficheURL:   "/img/libido.jpg",
-			Filas:       8,
-			PorFila:     15,
-			PrecioVIP:   250.0,
-			PrecioPref:  150.0,
-			PrecioGen:   80.0,
+			Nombre:     "Libido en Concierto: La Reunión",
+			Lugar:      "Arena 1, Costa Verde",
+			Fecha:      time.Date(2027, 1, 20, 20, 30, 0, 0, time.Local),
+			AficheURL:  "/img/libido.jpg",
+			Filas:      8,
+			PorFila:    15,
+			PrecioVIP:  250.0,
+			PrecioPref: 150.0,
+			PrecioGen:  80.0,
 		},
 	}
 
-	for _, ev := range eventos {
-		var eventoID int
-		err := pool.QueryRow(ctx, `
-			INSERT INTO eventos (nombre, lugar, fecha, afiche_url)
-			VALUES ($1, $2, $3, $4)
-			RETURNING id`, ev.Nombre, ev.Lugar, ev.Fecha, ev.AficheURL).Scan(&eventoID)
-		if err != nil {
-			log.Fatalf("Error insertando evento: %v", err)
-		}
-
-		log.Printf("Insertando asientos para %s (Aforo: %d)...", ev.Nombre, ev.Filas*ev.PorFila)
-
-		batch := &pgx.Batch{}
-		for f := 0; f < ev.Filas; f++ {
-			letraFila := string(rune('A' + f))
-			for num := 1; num <= ev.PorFila; num++ {
-				var zona string
-				var precio float64
-				if f < 2 {
-					zona = "VIP"
-					precio = ev.PrecioVIP
-				} else if f < 5 {
-					zona = "Preferencial"
-					precio = ev.PrecioPref
-				} else {
-					zona = "General"
-					precio = ev.PrecioGen
-				}
-
-				batch.Queue(`
-					INSERT INTO asientos (evento_id, fila, numero, precio, zona, estado)
-					VALUES ($1, $2, $3, $4, $5, 'libre')`,
-					eventoID, letraFila, num, precio, zona)
-			}
-		}
-
-		br := pool.SendBatch(ctx, batch)
-		if err := br.Close(); err != nil {
-			log.Fatalf("Error insertando lote de asientos: %v", err)
-		}
-	}
-
+	sembrarEventos(ctx, pool, eventos)
 	log.Println("Base de datos inicializada y poblada con éxito.")
 }
+
+

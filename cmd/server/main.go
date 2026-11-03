@@ -55,7 +55,16 @@ func main() {
 
 	// 4. Repositorio y Handlers HTTP
 	repo := repository.NuevoRepositorio(pool, cfg.ModoReserva, cfg.ReservaMinutos, cfg.MaxEntradasCliente)
-	router := handler.NuevoRouter(cfg, repo, sala, pasarela, limiteIP, entradas, metricas, "./static")
+	router := handler.NuevoRouter(handler.DependenciasRouter{
+		Cfg:       cfg,
+		Repo:      repo,
+		Sala:      sala,
+		Pasarela:  pasarela,
+		LimiteIP:  limiteIP,
+		Entradas:  entradas,
+		Metricas:  metricas,
+		StaticDir: "./static",
+	})
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Puerto,

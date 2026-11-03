@@ -15,6 +15,22 @@ import (
 	"pasarela-entradas/internal/service"
 )
 
+const (
+	ErrMetodoNoPermitido = "Método no permitido"
+	ErrCuerpoInvalido    = "Cuerpo inválido"
+)
+
+type DependenciasRouter struct {
+	Cfg       *config.Config
+	Repo      *repository.Repositorio
+	Sala      *service.SalaEspera
+	Pasarela  *service.PasarelaSimulada
+	LimiteIP  *service.LimitadorPeticiones
+	Entradas  *service.ServicioEntradas
+	Metricas  *service.Metricas
+	StaticDir string
+}
+
 type RouterHandler struct {
 	cfg       *config.Config
 	repo      *repository.Repositorio
@@ -27,26 +43,17 @@ type RouterHandler struct {
 	fileServe http.Handler
 }
 
-func NuevoRouter(
-	cfg *config.Config,
-	repo *repository.Repositorio,
-	sala *service.SalaEspera,
-	pasarela *service.PasarelaSimulada,
-	limiteIP *service.LimitadorPeticiones,
-	entradas *service.ServicioEntradas,
-	metricas *service.Metricas,
-	staticDir string,
-) *RouterHandler {
+func NuevoRouter(deps DependenciasRouter) *RouterHandler {
 	h := &RouterHandler{
-		cfg:       cfg,
-		repo:      repo,
-		sala:      sala,
-		pasarela:  pasarela,
-		limiteIP:  limiteIP,
-		entradas:  entradas,
-		metricas:  metricas,
+		cfg:       deps.Cfg,
+		repo:      deps.Repo,
+		sala:      deps.Sala,
+		pasarela:  deps.Pasarela,
+		limiteIP:  deps.LimiteIP,
+		entradas:  deps.Entradas,
+		metricas:  deps.Metricas,
 		mux:       http.NewServeMux(),
-		fileServe: http.FileServer(http.Dir(staticDir)),
+		fileServe: http.FileServer(http.Dir(deps.StaticDir)),
 	}
 	h.rutas()
 	return h
@@ -151,7 +158,7 @@ func (h *RouterHandler) verificarAdmin(r *http.Request) bool {
 
 func (h *RouterHandler) tokenizar(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.responderError(w, http.StatusMethodNotAllowed, "Método no permitido")
+		h.responderError(w, http.StatusMethodNotAllowed, ErrMetodoNoPermitido)
 		return
 	}
 	var datos struct {
@@ -161,7 +168,7 @@ func (h *RouterHandler) tokenizar(w http.ResponseWriter, r *http.Request) {
 		Titular     string `json:"titular"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&datos); err != nil {
-		h.responderError(w, http.StatusUnprocessableEntity, "Cuerpo inválido")
+		h.responderError(w, http.StatusUnprocessableEntity, ErrCuerpoInvalido)
 		return
 	}
 	res, err := h.pasarela.Tokenizar(datos.Numero, datos.Vencimiento, datos.CVV, datos.Titular)
@@ -192,7 +199,7 @@ func (h *RouterHandler) salud(w http.ResponseWriter, r *http.Request) {
 
 func (h *RouterHandler) reiniciarMetricas(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.responderError(w, http.StatusMethodNotAllowed, "Método no permitido")
+		h.responderError(w, http.StatusMethodNotAllowed, ErrMetodoNoPermitido)
 		return
 	}
 	h.metricas.Reiniciar()
@@ -201,7 +208,7 @@ func (h *RouterHandler) reiniciarMetricas(w http.ResponseWriter, r *http.Request
 
 func (h *RouterHandler) salaEntrar(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.responderError(w, http.StatusMethodNotAllowed, "Método no permitido")
+		h.responderError(w, http.StatusMethodNotAllowed, ErrMetodoNoPermitido)
 		return
 	}
 	ticket, posicion := h.sala.Entrar()
@@ -276,7 +283,7 @@ func (h *RouterHandler) enrutarEventoSubrecursos(w http.ResponseWriter, r *http.
 
 func (h *RouterHandler) crearReserva(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.responderError(w, http.StatusMethodNotAllowed, "Método no permitido")
+		h.responderError(w, http.StatusMethodNotAllowed, ErrMetodoNoPermitido)
 		return
 	}
 	cliente, err := h.identificarCliente(r)
@@ -293,7 +300,7 @@ func (h *RouterHandler) crearReserva(w http.ResponseWriter, r *http.Request) {
 		AsientoID int `json:"asiento_id"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.responderError(w, http.StatusUnprocessableEntity, "Cuerpo inválido")
+		h.responderError(w, http.StatusUnprocessableEntity, ErrCuerpoInvalido)
 		return
 	}
 
@@ -322,7 +329,7 @@ func (h *RouterHandler) crearReserva(w http.ResponseWriter, r *http.Request) {
 
 func (h *RouterHandler) cancelarReserva(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
-		h.responderError(w, http.StatusMethodNotAllowed, "Método no permitido")
+		h.responderError(w, http.StatusMethodNotAllowed, ErrMetodoNoPermitido)
 		return
 	}
 	cliente, err := h.identificarCliente(r)
@@ -352,7 +359,7 @@ func (h *RouterHandler) cancelarReserva(w http.ResponseWriter, r *http.Request) 
 
 func (h *RouterHandler) pagar(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.responderError(w, http.StatusMethodNotAllowed, "Método no permitido")
+		h.responderError(w, http.StatusMethodNotAllowed, ErrMetodoNoPermitido)
 		return
 	}
 	cliente, err := h.identificarCliente(r)
@@ -372,7 +379,7 @@ func (h *RouterHandler) pagar(w http.ResponseWriter, r *http.Request) {
 		TokenPago string `json:"token_pago"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.responderError(w, http.StatusUnprocessableEntity, "Cuerpo inválido")
+		h.responderError(w, http.StatusUnprocessableEntity, ErrCuerpoInvalido)
 		return
 	}
 
@@ -381,7 +388,6 @@ func (h *RouterHandler) pagar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 1. Cobrar en la pasarela simulada
 	cargo, err := h.pasarela.Cobrar(req.TokenPago, 0, "Entrada Concierto", req.Email)
 	if err != nil {
 		h.metricas.Sumar("pagos_rechazados", 1)
@@ -391,7 +397,6 @@ func (h *RouterHandler) pagar(w http.ResponseWriter, r *http.Request) {
 
 	ultimos4, _ := cargo["tarjeta_ultimos4"].(string)
 
-	// 2. Liquidar en Base de Datos de manera ACID
 	orden, err := h.repo.PagarYConfirmar(r.Context(), req.AsientoID, cliente, req.Comprador, req.Email, ultimos4)
 	if err != nil {
 		h.metricas.Sumar("pagos_conflicto", 1)
@@ -442,7 +447,7 @@ func (h *RouterHandler) adminResumen(w http.ResponseWriter, r *http.Request) {
 
 func (h *RouterHandler) adminValidar(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
-		h.responderError(w, http.StatusMethodNotAllowed, "Método no permitido")
+		h.responderError(w, http.StatusMethodNotAllowed, ErrMetodoNoPermitido)
 		return
 	}
 	if !h.verificarAdmin(r) {
@@ -454,7 +459,7 @@ func (h *RouterHandler) adminValidar(w http.ResponseWriter, r *http.Request) {
 		Contenido string `json:"contenido"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		h.responderError(w, http.StatusUnprocessableEntity, "Cuerpo inválido")
+		h.responderError(w, http.StatusUnprocessableEntity, ErrCuerpoInvalido)
 		return
 	}
 
