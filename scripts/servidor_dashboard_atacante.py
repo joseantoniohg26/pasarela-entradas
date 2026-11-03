@@ -148,6 +148,7 @@ HTML_PAGINA = """<!DOCTYPE html>
       <button class="btn" onclick="disparar('bots')">2. Test Antibots (RNF-05)</button>
       <button class="btn" onclick="disparar('carga')">3. Carga k6 100 VUs (RNF-02)</button>
       <button class="btn" onclick="disparar('latencia')">4. Test Latencia (Percentiles)</button>
+      <button class="btn btn-red" style="background: #991b1b; border-color: #f87171;" onclick="disparar('masiva_250k')">5. Avalancha Masiva 250k (Stress Extremo)</button>
     </div>
 
     <div class="cards">
@@ -272,6 +273,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 "bots": f"python3 pruebas/bots.py --url {obj}",
                 "carga": f"k6 run -e BASE={obj} -e VUS=50 pruebas/carga.js",
                 "latencia": f"python3 pruebas/latencia.py --url {obj} --clientes 100 --ritmo 50",
+                "masiva_250k": f"k6 run -e BASE={obj} pruebas/carga_masiva_250k.js",
             }
             cmd = comandos.get(tipo, comandos["sobreventa"])
             ejecutar_comando_fondo(tipo, f"cd /root/pasarela-entradas && {cmd}")
