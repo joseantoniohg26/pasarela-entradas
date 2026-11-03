@@ -23,3 +23,41 @@ body {
 html {
   scroll-behavior: smooth;
 }
+
+/* Efectos interactivos del Mapa Dinámico SVG Teleticket */
+#plano svg [id^="s_"] {
+  cursor: pointer;
+  transition: opacity 0.3s ease, filter 0.3s ease;
+}
+
+#plano svg [id^="s_"]:hover {
+  opacity: 1 !important;
+  filter: brightness(1.25) drop-shadow(0 0 8px rgba(0,0,0,0.4));
+}
+
+#plano svg [id^="s_"].dimmed {
+  opacity: 0.25;
+  filter: grayscale(40%);
+}
+
+#plano svg [id^="s_"].active {
+  opacity: 1 !important;
+  filter: drop-shadow(0 0 10px rgba(192, 108, 35, 0.85)) !important;
+}
+
+.map-tooltip {
+  position: fixed;
+  background: rgba(18, 18, 18, 0.95);
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  pointer-events: none;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  transform: translate(-50%, -130%);
+  z-index: 9999;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}

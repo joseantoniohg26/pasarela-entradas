@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const BACKEND_URL = "http://127.0.0.1:8000";
 
@@ -34,6 +34,84 @@ export default function App() {
   const [paseCompra, setPaseCompra] = useState<string | null>(null);
   const [cargando, setCargando] = useState(false);
   const [mostrarSpotify, setMostrarSpotify] = useState(false);
+
+  // Estados para el mapa dinámico SVG
+  const [svgContent, setSvgContent] = useState<string>("");
+  const [tooltip, setTooltip] = useState<{ texto: string; x: number; y: number; visible: boolean }>({
+    texto: "",
+    x: 0,
+    y: 0,
+    visible: false,
+  });
+  const planoRef = useRef<HTMLDivElement>(null);
+
+  // 1. Cargar el mapa SVG una sola vez
+  useEffect(() => {
+    fetch("/mapa.svg")
+      .then((res) => res.text())
+      .then((raw) => {
+        // Asegurar que el SVG use viewBox responsivo y no desborde
+        setSvgContent(raw);
+      })
+      .catch((err) => console.error("Error cargando mapa SVG:", err));
+  }, []);
+
+  // 2. Gestionar eventos dinámicos y clases active/dimmed en el SVG
+  useEffect(() => {
+    if (!svgContent || !planoRef.current) return;
+    const contenedor = planoRef.current;
+    const zonas = contenedor.querySelectorAll<SVGGraphicsElement>('[id^="s_"]');
+
+    const handleMouseEnter = (e: MouseEvent) => {
+      const target = (e.currentTarget as SVGGraphicsElement);
+      const nombre = target.getAttribute("data-name") || target.id;
+      setTooltip({ texto: nombre, x: e.clientX, y: e.clientY, visible: true });
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      setTooltip((prev) => ({ ...prev, x: e.clientX, y: e.clientY }));
+    };
+
+    const handleMouseLeave = () => {
+      setTooltip((prev) => ({ ...prev, visible: false }));
+    };
+
+    const handleClick = (e: MouseEvent) => {
+      const target = (e.currentTarget as SVGGraphicsElement);
+      if (target.id) {
+        setSectorSeleccionado(target.id);
+      }
+    };
+
+    zonas.forEach((zona) => {
+      zona.addEventListener("mouseenter", handleMouseEnter);
+      zona.addEventListener("mousemove", handleMouseMove);
+      zona.addEventListener("mouseleave", handleMouseLeave);
+      zona.addEventListener("click", handleClick);
+
+      // Resaltar sector seleccionado y atenuar el resto
+      if (sectorSeleccionado) {
+        if (zona.id === sectorSeleccionado) {
+          zona.classList.add("active");
+          zona.classList.remove("dimmed");
+        } else {
+          zona.classList.remove("active");
+          zona.classList.add("dimmed");
+        }
+      } else {
+        zona.classList.remove("active", "dimmed");
+      }
+    });
+
+    return () => {
+      zonas.forEach((zona) => {
+        zona.removeEventListener("mouseenter", handleMouseEnter);
+        zona.removeEventListener("mousemove", handleMouseMove);
+        zona.removeEventListener("mouseleave", handleMouseLeave);
+        zona.removeEventListener("click", handleClick);
+      });
+    };
+  }, [svgContent, sectorSeleccionado]);
 
   // Iniciar flujo de compra pasando por la Sala de Espera de Go
   const iniciarCompra = async (sectorId?: string) => {
@@ -228,15 +306,13 @@ export default function App() {
                   PLANO OFICIAL · ESTADIO NACIONAL
                 </span>
                 
-                {/* SVG Oficial Inyectado */}
-                <div className="relative aspect-[1000/1494] w-full flex items-center justify-center">
-                  <object
-                    type="image/svg+xml"
-                    data="/mapa.svg"
-                    className="w-full h-auto drop-shadow-md cursor-pointer"
-                    aria-label="Plano de sectores Estadio Nacional"
-                  ></object>
-                </div>
+                {/* SVG Oficial Inyectado dinámicamente con interacción directa */}
+                <div
+                  id="plano"
+                  ref={planoRef}
+                  className="relative w-full flex items-center justify-center overflow-hidden min-h-[350px]"
+                  dangerouslySetInnerHTML={{ __html: svgContent }}
+                />
 
                 <div className="flex flex-wrap gap-2 justify-center pt-3 text-[10px] font-bold">
                   {SECTORES.map(s => (
@@ -570,6 +646,19 @@ export default function App() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* Tooltip Dinámico Flotante de Sectores SVG */}
+      {tooltip.visible && (
+        <div
+          className="map-tooltip"
+          style={{
+            left: `${tooltip.x}px`,
+            top: `${tooltip.y}px`,
+          }}
+        >
+          {tooltip.texto}
         </div>
       )}
     </div>
