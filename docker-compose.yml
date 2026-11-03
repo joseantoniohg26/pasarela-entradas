@@ -1,0 +1,51 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: tiquetera_app
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/pasarela?sslmode=disable
+      - MODO_RESERVA=sala
+      - RESERVA_MINUTOS=5
+      - PASE_MINUTOS=15
+      - MAX_ENTRADAS_POR_CLIENTE=4
+      - SALA_ADMITIDOS_POR_SEG=50
+      - ANTIBOTS=1
+      - LIMITE_PETICIONES=60
+      - VENTANA_SEGUNDOS=10
+      - POOL_MAX=50
+      - POOL_TIMEOUT=5.0
+      - PAGO_LATENCIA_MS=200
+      - ADMIN_CLAVE=admin123
+      - SECRETO=tu_clave_secreta_de_produccion_super_larga
+      - PUERTO=8000
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    container_name: tiquetera_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pasarela
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./sql/esquema.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pasarela"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  pgdata:
+
