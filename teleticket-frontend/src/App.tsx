@@ -3,26 +3,31 @@ import { useState, useEffect } from "react";
 const BACKEND_URL = "http://127.0.0.1:8000";
 
 interface SectorTarifa {
+  id: string;
   nombre: string;
+  tipo: string;
   preventa: number;
   full: number;
   conadis: number | null;
-  tipo: string;
+  agotadoPreventa?: boolean;
+  agotadoFull?: boolean;
+  agotadoConadis?: boolean;
   color: string;
 }
 
 const SECTORES: SectorTarifa[] = [
-  { nombre: "CAMPO A", preventa: 270.0, full: 320.0, conadis: null, tipo: "STAND UP", color: "#E53935" },
-  { nombre: "CAMPO B", preventa: 125.0, full: 147.0, conadis: null, tipo: "STAND UP", color: "#FB8C00" },
-  { nombre: "TRIBUNA OCCIDENTE 1", preventa: 185.0, full: 217.0, conadis: 173.0, tipo: "NUMERADO", color: "#1E88E5" },
-  { nombre: "TRIBUNA OCCIDENTE 2", preventa: 160.0, full: 190.0, conadis: null, tipo: "NUMERADO", color: "#43A047" },
-  { nombre: "TRIBUNA ORIENTE 1", preventa: 185.0, full: 217.0, conadis: null, tipo: "NUMERADO", color: "#8E24AA" },
-  { nombre: "TRIBUNA ORIENTE 2", preventa: 160.0, full: 190.0, conadis: null, tipo: "NUMERADO", color: "#00ACC1" },
-  { nombre: "TRIBUNA NORTE", preventa: 80.0, full: 95.0, conadis: null, tipo: "SIN NUMERAR", color: "#FDD835" },
+  { id: "s_campo_a", nombre: "CAMPO A", tipo: "STAND UP", preventa: 270.0, full: 320.0, conadis: null, agotadoPreventa: true, agotadoFull: false, color: "#C06C23" },
+  { id: "s_campo_b", nombre: "CAMPO B", tipo: "STAND UP", preventa: 125.0, full: 147.0, conadis: null, agotadoPreventa: true, agotadoFull: false, color: "#D85830" },
+  { id: "s_occ_1", nombre: "TRIBUNA OCCIDENTE 1", tipo: "NUMERADO", preventa: 185.0, full: 217.0, conadis: 173.0, agotadoPreventa: true, agotadoFull: true, agotadoConadis: true, color: "#8E8659" },
+  { id: "s_occ_2", nombre: "TRIBUNA OCCIDENTE 2", tipo: "NUMERADO", preventa: 160.0, full: 190.0, conadis: null, agotadoPreventa: true, agotadoFull: true, color: "#1D1D1B" },
+  { id: "s_or_1", nombre: "TRIBUNA ORIENTE 1", tipo: "NUMERADO", preventa: 185.0, full: 217.0, conadis: null, agotadoPreventa: true, agotadoFull: true, color: "#8E8659" },
+  { id: "s_or_2", nombre: "TRIBUNA ORIENTE 2", tipo: "NUMERADO", preventa: 160.0, full: 190.0, conadis: null, agotadoPreventa: true, agotadoFull: true, color: "#1D1D1B" },
+  { id: "s_norte", nombre: "TRIBUNA NORTE", tipo: "SIN NUMERAR", preventa: 80.0, full: 95.0, conadis: null, agotadoPreventa: true, agotadoFull: true, color: "#788882" },
 ];
 
 export default function App() {
   const [modalCompra, setModalCompra] = useState(false);
+  const [sectorSeleccionado, setSectorSeleccionado] = useState<string>("s_campo_a");
   const [enSala, setEnSala] = useState(false);
   const [ticketCola, setTicketCola] = useState<string | null>(null);
   const [posicionCola, setPosicionCola] = useState<number | null>(null);
@@ -31,7 +36,8 @@ export default function App() {
   const [mostrarSpotify, setMostrarSpotify] = useState(false);
 
   // Iniciar flujo de compra pasando por la Sala de Espera de Go
-  const iniciarCompra = async () => {
+  const iniciarCompra = async (sectorId?: string) => {
+    if (sectorId) setSectorSeleccionado(sectorId);
     setModalCompra(true);
     setCargando(true);
     try {
@@ -42,7 +48,6 @@ export default function App() {
       setPosicionCola(data.posicion);
       setEnSala(true);
     } catch {
-      // Si el backend no está disponible localmente, simula acceso directo
       setPaseCompra("demo_pase_local");
       setEnSala(false);
     } finally {
@@ -50,7 +55,6 @@ export default function App() {
     }
   };
 
-  // Sondeo periódico de posición en la cola virtual
   useEffect(() => {
     if (!enSala || !ticketCola) return;
     const interval = setInterval(async () => {
@@ -73,11 +77,12 @@ export default function App() {
     return () => clearInterval(interval);
   }, [enSala, ticketCola]);
 
+  const sectorActivo = SECTORES.find(s => s.id === sectorSeleccionado) || SECTORES[0];
+
   return (
     <div className="min-h-screen flex flex-col bg-white text-[#212121]">
       {/* 1. Header Oficial Teleticket */}
       <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-xs">
-        {/* Barra superior de enlaces */}
         <div className="bg-[#1F1F1F] text-white text-[11px] py-1.5 px-4 sm:px-8 flex justify-between items-center">
           <div className="flex gap-4">
             <span className="hover:text-gray-300 cursor-pointer font-medium">Inicio</span>
@@ -89,7 +94,6 @@ export default function App() {
           </div>
         </div>
 
-        {/* Barra principal de navegación */}
         <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-6">
             <a href="#page-top" className="flex items-center gap-1 font-black text-2xl tracking-tighter text-[#D31411]">
@@ -127,14 +131,12 @@ export default function App() {
           </div>
         </div>
 
-        {/* Submenú de secciones del evento */}
         <nav className="bg-[#D31411] text-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-8 flex overflow-x-auto text-xs font-bold uppercase tracking-wider py-2.5 gap-6">
             <a href="#page-top" className="hover:text-gray-200 shrink-0">INICIO</a>
-            <a href="#precios" className="hover:text-gray-200 shrink-0">PRECIOS</a>
-            <a href="#botonera" className="hover:text-gray-200 shrink-0 text-yellow-300">COMPRAR</a>
+            <a href="#price-section" className="hover:text-gray-200 shrink-0 text-yellow-300 font-black">PRECIOS Y MAPA</a>
+            <a href="#botonera" className="hover:text-gray-200 shrink-0">COMPRAR</a>
             <a href="#info" className="hover:text-gray-200 shrink-0">INFO EVENTO</a>
-            <a href="#multimedia" className="hover:text-gray-200 shrink-0">MULTIMEDIA</a>
             <a href="#legales" className="hover:text-gray-200 shrink-0">LEGALES</a>
           </div>
         </nav>
@@ -171,7 +173,7 @@ export default function App() {
 
             <div id="botonera" className="pt-4 flex flex-wrap gap-4 items-center">
               <button
-                onClick={iniciarCompra}
+                onClick={() => iniciarCompra()}
                 className="bg-[#D31411] hover:bg-[#b5100d] text-white font-extrabold text-sm uppercase px-8 py-4 rounded-xs shadow-lg transition-transform active:scale-95 flex items-center gap-2"
               >
                 <span>COMPRAR ENTRADAS</span>
@@ -209,73 +211,169 @@ export default function App() {
         </div>
       </section>
 
-      {/* 3. Sección de Precios y Plano de Sectores */}
-      <section id="precios" className="py-12 bg-gray-50 border-b border-gray-200">
+      {/* 3. SECCIÓN OFICIAL DE PRECIOS CON PLANO SVG INTERACTIVO */}
+      <section id="price-section" className="py-12 bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-8">
-          <div className="text-center mb-10">
-            <span className="text-[#D31411] text-xs font-black uppercase tracking-widest block mb-1">
-              TARIFAS Y UBICACIONES
-            </span>
-            <h2 className="text-2xl sm:text-3xl font-extrabold text-[#1F1F1F]">
-              SECTORES Y PRECIOS
-            </h2>
-            <p className="text-xs text-gray-500 mt-1 max-w-lg mx-auto">
-              Precios válidos en preventa con tarjetas Interbank o hasta agotar stock asignado.
+          <div className="text-center mb-8">
+            <p className="text-sm font-bold text-gray-700 flex items-center justify-center gap-1.5 uppercase tracking-wide">
+              Selecciona tu sector para ver el precio
             </p>
           </div>
 
-          {/* Tabla de Tarifas Exactas */}
-          <div className="overflow-x-auto bg-white rounded-md border border-gray-200 shadow-xs mb-8">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="bg-[#1F1F1F] text-white uppercase text-[11px] tracking-wider">
-                  <th className="py-3 px-4 font-bold">SECTOR</th>
-                  <th className="py-3 px-4 font-bold">TIPO</th>
-                  <th className="py-3 px-4 font-bold text-yellow-400 bg-[#2b2b2b]">
-                    PREVENTA INTERBANK (-15%)
-                  </th>
-                  <th className="py-3 px-4 font-bold">PRECIO FULL</th>
-                  <th className="py-3 px-4 font-bold">CONADIS</th>
-                  <th className="py-3 px-4 font-bold text-center">ACCIÓN</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {SECTORES.map((s, idx) => (
-                  <tr key={idx} className="hover:bg-gray-50 transition-colors">
-                    <td className="py-3.5 px-4 font-extrabold text-[#1F1F1F] flex items-center gap-2">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: s.color }}></span>
-                      {s.nombre}
-                    </td>
-                    <td className="py-3.5 px-4 text-gray-500 font-medium">{s.tipo}</td>
-                    <td className="py-3.5 px-4 font-bold text-[#D31411] bg-red-50/50">
-                      S/ {s.preventa.toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4 text-gray-700 font-semibold">
-                      S/ {s.full.toFixed(2)}
-                    </td>
-                    <td className="py-3.5 px-4 text-gray-600">
-                      {s.conadis ? `S/ ${s.conadis.toFixed(2)}` : "—"}
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <button
-                        onClick={iniciarCompra}
-                        className="bg-[#D31411] hover:bg-[#b5100d] text-white text-[11px] font-bold py-1.5 px-4 rounded-xs uppercase tracking-wider"
-                      >
-                        Comprar
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            {/* Columna Izquierda: Plano SVG Dinámico de Teleticket */}
+            <div className="lg:col-span-5 flex flex-col items-center">
+              <div className="w-full max-w-md bg-white border border-gray-200 rounded-lg p-4 shadow-sm relative">
+                <span className="text-[10px] font-black uppercase text-gray-400 tracking-widest block text-center mb-2">
+                  PLANO OFICIAL · ESTADIO NACIONAL
+                </span>
+                
+                {/* SVG Oficial Inyectado */}
+                <div className="relative aspect-[1000/1494] w-full flex items-center justify-center">
+                  <object
+                    type="image/svg+xml"
+                    data="/mapa.svg"
+                    className="w-full h-auto drop-shadow-md cursor-pointer"
+                    aria-label="Plano de sectores Estadio Nacional"
+                  ></object>
+                </div>
 
-          <div className="bg-blue-50 border border-blue-200 rounded-md p-4 flex items-start gap-3 text-xs text-blue-900">
-            <svg className="w-5 h-5 text-blue-600 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <strong>Condición de Preventa:</strong> Válido para Tarjetas de Crédito y Débito Interbank del 20 al 21 de febrero de 2026 o hasta agotar stock de 23,200 entradas. Máximo 6 entradas por cliente.
+                <div className="flex flex-wrap gap-2 justify-center pt-3 text-[10px] font-bold">
+                  {SECTORES.map(s => (
+                    <button
+                      key={s.id}
+                      onClick={() => setSectorSeleccionado(s.id)}
+                      className={`px-2 py-1 rounded-xs border transition-all ${
+                        sectorSeleccionado === s.id
+                          ? "bg-[#D31411] text-white border-[#D31411]"
+                          : "bg-gray-100 text-gray-700 hover:border-gray-400"
+                      }`}
+                    >
+                      {s.nombre}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Columna Derecha: Tabla Gráfica Oficial de Teleticket */}
+            <div className="lg:col-span-7 space-y-4">
+              <div className="overflow-x-auto border border-gray-200 rounded-sm">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-[11px] font-black tracking-wider text-gray-800">
+                      <th className="py-3 px-4 bg-gray-50 uppercase">SECTORES</th>
+                      <th className="py-3 px-4 text-center bg-[#fdf5eb] text-[#C06C23] border-l border-r border-gray-200">
+                        <span className="block text-[10px] font-black tracking-widest">PREVENTA</span>
+                        <span className="block text-[12px] font-extrabold text-[#0039A6]">Interbank</span>
+                        <span className="text-[9px] font-normal text-gray-500 block leading-tight">Hasta el 21/02 o agotar stock</span>
+                      </th>
+                      <th className="py-3 px-4 text-center bg-gray-50 border-r border-gray-200">
+                        <span className="block text-[10px] font-black tracking-widest text-[#C06C23]">PRECIO FULL</span>
+                        <span className="text-[9px] font-normal text-gray-500 block leading-tight">Todos los medios de pago</span>
+                      </th>
+                      <th className="py-3 px-4 text-center bg-gray-50">
+                        <span className="block text-[10px] font-black tracking-widest text-[#C06C23]">CONADIS</span>
+                        <span className="text-[9px] font-normal text-gray-500 block leading-tight">Todos los medios de pago</span>
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {SECTORES.map(s => {
+                      const esSeleccionado = sectorSeleccionado === s.id;
+                      return (
+                        <tr
+                          key={s.id}
+                          onClick={() => setSectorSeleccionado(s.id)}
+                          className={`cursor-pointer transition-colors ${
+                            esSeleccionado ? "bg-amber-50/70 ring-2 ring-[#C06C23] ring-inset" : "hover:bg-gray-50"
+                          }`}
+                        >
+                          <td className="py-3 px-4">
+                            <div className="flex items-start gap-2">
+                              <span className="w-2.5 h-6 rounded-xs shrink-0" style={{ backgroundColor: s.color }}></span>
+                              <div>
+                                <span className="font-black text-[#1F1F1F] text-xs block">{s.nombre}</span>
+                                <span className="text-[10px] text-gray-500 font-semibold">{s.tipo}</span>
+                              </div>
+                            </div>
+                          </td>
+
+                          {/* Casilla Preventa */}
+                          <td className="py-3 px-4 text-center border-l border-r border-gray-200 bg-[#fefaf4]">
+                            {s.agotadoPreventa ? (
+                              <span className="inline-block bg-[#D31411] text-white text-[9px] font-black px-3 py-1 rounded-sm uppercase tracking-wider shadow-xs">
+                                AGOTADO
+                              </span>
+                            ) : (
+                              <span className="font-extrabold text-sm text-[#C06C23]">
+                                S/ {s.preventa.toFixed(2)}
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Casilla Precio Full */}
+                          <td className="py-3 px-4 text-center border-r border-gray-200">
+                            {s.agotadoFull ? (
+                              <span className="inline-block bg-[#D31411] text-white text-[9px] font-black px-3 py-1 rounded-sm uppercase tracking-wider shadow-xs">
+                                AGOTADO
+                              </span>
+                            ) : (
+                              <span className="font-extrabold text-sm text-[#1F1F1F]">
+                                S/ {s.full.toFixed(2)}
+                              </span>
+                            )}
+                          </td>
+
+                          {/* Casilla Conadis */}
+                          <td className="py-3 px-4 text-center">
+                            {s.conadis ? (
+                              s.agotadoConadis ? (
+                                <span className="inline-block bg-[#D31411] text-white text-[9px] font-black px-3 py-1 rounded-sm uppercase tracking-wider shadow-xs">
+                                  AGOTADO
+                                </span>
+                              ) : (
+                                <span className="font-bold text-xs text-gray-700">
+                                  S/ {s.conadis.toFixed(2)}
+                                </span>
+                              )
+                            ) : (
+                              <span className="text-gray-400 font-bold">----</span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Botón de compra para el sector activo */}
+              <div className="border border-gray-200 rounded-sm p-4 bg-gray-50 flex flex-col sm:flex-row justify-between items-center gap-3">
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-gray-500 block">SECTOR SELECCIONADO</span>
+                  <strong className="text-base font-black text-[#1F1F1F]">{sectorActivo.nombre}</strong>
+                  <span className="text-xs text-[#C06C23] font-bold block">
+                    Precio Full: S/ {sectorActivo.full.toFixed(2)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => iniciarCompra(sectorActivo.id)}
+                  disabled={sectorActivo.agotadoFull}
+                  className={`w-full sm:w-auto font-black text-xs uppercase px-8 py-3.5 rounded-xs tracking-wider transition-all shadow-md ${
+                    sectorActivo.agotadoFull
+                      ? "bg-gray-400 cursor-not-allowed text-white"
+                      : "bg-[#D31411] hover:bg-[#b5100d] text-white active:scale-95"
+                  }`}
+                >
+                  {sectorActivo.agotadoFull ? "SECTOR AGOTADO" : "COMPRAR ENTRADAS"}
+                </button>
+              </div>
+
+              {/* Banner informativo E-Tickets */}
+              <div className="border border-[#C06C23] rounded-md p-3.5 text-center text-xs text-[#C06C23] font-semibold bg-[#fffaf5]">
+                La descarga de los E-tickets estará disponible desde 2 días antes de la fecha de tu evento o función.
+              </div>
             </div>
           </div>
         </div>
@@ -297,24 +395,6 @@ export default function App() {
               <li><strong>Ingreso de Menores:</strong> A partir de 5 años acompañados de un adulto responsable.</li>
               <li><strong>Descarga de E-Tickets:</strong> Disponible desde 2 días antes de la fecha del evento.</li>
             </ul>
-
-            <div id="multimedia" className="pt-2">
-              <h3 className="text-base font-bold text-[#1F1F1F] uppercase mb-3 border-b-2 border-[#D31411] pb-1 inline-block">
-                MULTIMEDIA
-              </h3>
-              <p className="text-gray-600 mb-3">
-                Escucha los mejores temas de Paulo Londra mientras esperas en la cola virtual activando el reproductor interactivo.
-              </p>
-              <button
-                onClick={() => setMostrarSpotify(!mostrarSpotify)}
-                className="inline-flex items-center gap-2 bg-[#1DB954] hover:bg-[#1aa34a] text-white font-bold text-xs px-4 py-2 rounded-full shadow-sm transition-transform active:scale-95"
-              >
-                <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z"/>
-                </svg>
-                <span>{mostrarSpotify ? "Ocultar Reproductor" : "Reproducir en Spotify"}</span>
-              </button>
-            </div>
           </div>
 
           <div id="legales">
@@ -339,7 +419,7 @@ export default function App() {
             <span className="text-[10px] text-gray-500">Desde S/ 80.00</span>
           </div>
           <button
-            onClick={iniciarCompra}
+            onClick={() => iniciarCompra()}
             className="bg-[#D31411] hover:bg-[#b5100d] text-white font-extrabold text-xs uppercase px-5 py-2.5 rounded-xs flex items-center gap-1.5 shadow-md active:scale-95"
           >
             <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -352,7 +432,6 @@ export default function App() {
 
       {/* 6. Spotify Floating Action Button (FAB) Flotante persistente con el Scroll */}
       <div className="fixed bottom-16 lg:bottom-6 right-5 z-40 flex flex-col items-end">
-        {/* Panel del reproductor expandible */}
         {mostrarSpotify && (
           <div className="mb-3 w-80 sm:w-96 bg-black/90 p-2.5 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-lg animate-in fade-in slide-in-from-bottom-4 duration-200">
             <div className="flex justify-between items-center px-2 pb-1.5 text-white text-[11px] font-bold">
@@ -381,7 +460,6 @@ export default function App() {
           </div>
         )}
 
-        {/* Botón FAB circular verde oficial de Spotify */}
         <button
           onClick={() => setMostrarSpotify(!mostrarSpotify)}
           className="group relative flex items-center gap-2 bg-[#1DB954] hover:bg-[#1aa34a] text-white p-3.5 rounded-full shadow-xl transition-all duration-300 hover:scale-105 active:scale-95"
@@ -413,7 +491,7 @@ export default function App() {
         </div>
       </footer>
 
-      {/* 6. Modal Interactivo: Cola Virtual / Proceso de Compra */}
+      {/* 8. Modal Interactivo: Cola Virtual / Proceso de Compra */}
       {modalCompra && (
         <div className="fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
           <div className="bg-white rounded-lg shadow-2xl max-w-md w-full p-6 text-center space-y-4 relative">
@@ -464,13 +542,21 @@ export default function App() {
                 </p>
 
                 <div className="text-left space-y-2 max-h-48 overflow-y-auto pr-1">
-                  {SECTORES.map((s, idx) => (
-                    <div key={idx} className="flex justify-between items-center p-2.5 border rounded-sm hover:border-[#D31411] cursor-pointer text-xs">
+                  {SECTORES.map(s => (
+                    <div
+                      key={s.id}
+                      onClick={() => !s.agotadoFull && setSectorSeleccionado(s.id)}
+                      className={`flex justify-between items-center p-2.5 border rounded-sm text-xs cursor-pointer ${
+                        sectorSeleccionado === s.id ? "border-[#D31411] bg-red-50/40" : "hover:border-gray-300"
+                      } ${s.agotadoFull ? "opacity-50 cursor-not-allowed" : ""}`}
+                    >
                       <div>
                         <span className="font-bold text-gray-800 block">{s.nombre}</span>
                         <span className="text-[10px] text-gray-500">{s.tipo}</span>
                       </div>
-                      <span className="font-extrabold text-[#D31411]">S/ {s.preventa.toFixed(2)}</span>
+                      <span className="font-extrabold text-[#D31411]">
+                        {s.agotadoFull ? "AGOTADO" : `S/ ${s.full.toFixed(2)}`}
+                      </span>
                     </div>
                   ))}
                 </div>
