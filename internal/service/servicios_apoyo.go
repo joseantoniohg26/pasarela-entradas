@@ -1,13 +1,17 @@
 package service
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net/http"
 	"regexp"
 	"strconv"
 	"strings"
@@ -28,17 +32,21 @@ type TokenTarjeta struct {
 }
 
 type PasarelaSimulada struct {
-	mu         sync.Mutex
-	tokens     map[string]TokenTarjeta
-	cargos     map[string]map[string]any
-	latenciaMs int
+	mu             sync.Mutex
+	tokens         map[string]TokenTarjeta
+	cargos         map[string]map[string]any
+	latenciaMs     int
+	culqiSecretKey string
+	httpClient     *http.Client
 }
 
-func NuevaPasarela(latenciaMs int) *PasarelaSimulada {
+func NuevaPasarela(latenciaMs int, culqiSecretKey string) *PasarelaSimulada {
 	return &PasarelaSimulada{
-		tokens:     make(map[string]TokenTarjeta),
-		cargos:     make(map[string]map[string]any),
-		latenciaMs: latenciaMs,
+		tokens:         make(map[string]TokenTarjeta),
+		cargos:         make(map[string]map[string]any),
+		latenciaMs:     latenciaMs,
+		culqiSecretKey: culqiSecretKey,
+		httpClient:     &http.Client{Timeout: 10 * time.Second},
 	}
 }
 
@@ -134,6 +142,11 @@ func (p *PasarelaSimulada) Tokenizar(numero, vencimiento, cvv, titular string) (
 }
 
 func (p *PasarelaSimulada) Cobrar(token string, monto float64, descripcion, email string) (map[string]any, error) {
+	// Si el token proviene de la API de Culqi (ej. tkn_live_ o tkn_test_) y tenemos Secret Key configurada
+	if strings.HasPrefix(token, "tkn_") && p.culqiSecretKey != "" {
+		return p.cobrarCulqiAPI(token, monto, descripcion, email)
+	}
+
 	if p.latenciaMs > 0 {
 		time.Sleep(time.Duration(p.latenciaMs) * time.Millisecond)
 	}
@@ -161,6 +174,94 @@ func (p *PasarelaSimulada) Cobrar(token string, monto float64, descripcion, emai
 		"marca":            info.Marca,
 		"tarjeta_ultimos4": info.Ultimos4,
 		"titular":          info.Titular,
+	}
+
+	p.mu.Lock()
+	p.cargos[cargoID] = res
+	p.mu.Unlock()
+
+	return res, nil
+}
+
+func (p *PasarelaSimulada) cobrarCulqiAPI(token string, monto float64, descripcion, email string) (map[string]any, error) {
+	// Culqi requiere el monto expresado en céntimos
+	centimos := int64(monto * 100)
+	if descripcion == "" {
+		descripcion = "Entrada Paulo Londra - Estadio Nacional 2026"
+	}
+
+	payload := map[string]any{
+		"amount":        centimos,
+		"currency_code": "PEN",
+		"email":         email,
+		"source_id":     token,
+		"description":   descripcion,
+		"capture":       true,
+	}
+
+	cuerpoJSON, err := json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("error al serializar cargo Culqi: %w", err)
+	}
+
+	req, err := http.NewRequest(http.MethodPost, "https://api.culqi.com/v2/charges", bytes.NewBuffer(cuerpoJSON))
+	if err != nil {
+		return nil, fmt.Errorf("error creando petición a Culqi: %w", err)
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+p.culqiSecretKey)
+
+	resp, err := p.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("error de conexión con Culqi: %w", err)
+	}
+	defer resp.Body.Close()
+
+	respBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("error leyendo respuesta de Culqi: %w", err)
+	}
+
+	var culqiResp map[string]any
+	if err := json.Unmarshal(respBytes, &culqiResp); err != nil {
+		return nil, fmt.Errorf("respuesta inválida de Culqi: %s", string(respBytes))
+	}
+
+	if resp.StatusCode >= 400 {
+		userMsg, _ := culqiResp["user_message"].(string)
+		merchantMsg, _ := culqiResp["merchant_message"].(string)
+		if userMsg != "" {
+			return nil, errors.New(userMsg)
+		}
+		if merchantMsg != "" {
+			return nil, errors.New(merchantMsg)
+		}
+		return nil, fmt.Errorf("cargo rechazado por Culqi (status %d)", resp.StatusCode)
+	}
+
+	cargoID, _ := culqiResp["id"].(string)
+	ultimos4 := "----"
+	marca := "Culqi"
+
+	if srcObj, ok := culqiResp["source"].(map[string]any); ok {
+		if iin, ok := srcObj["iin"].(map[string]any); ok {
+			if m, ok := iin["card_brand"].(string); ok && m != "" {
+				marca = m
+			}
+		}
+		if last4, ok := srcObj["last_four"].(string); ok && last4 != "" {
+			ultimos4 = last4
+		}
+	}
+
+	res := map[string]any{
+		"id":               cargoID,
+		"estado":           "aprobado",
+		"monto":            monto,
+		"marca":            marca,
+		"tarjeta_ultimos4": ultimos4,
+		"titular":          email,
 	}
 
 	p.mu.Lock()

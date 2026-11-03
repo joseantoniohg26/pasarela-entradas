@@ -24,6 +24,8 @@ type Config struct {
 	AdminClave           string
 	Secreto              string
 	Puerto               string
+	CulqiPublicKey       string
+	CulqiSecretKey       string
 }
 
 func Cargar() *Config {
@@ -55,6 +57,8 @@ func Cargar() *Config {
 		AdminClave:          getEnv("ADMIN_CLAVE", ""),
 		Secreto:             secreto,
 		Puerto:              getEnv("PUERTO", "8000"),
+		CulqiPublicKey:      getEnv("CULQI_PUBLIC_KEY", "pk_live_cqeIUMjPyHVgpBcx"),
+		CulqiSecretKey:      getEnv("CULQI_SECRET_KEY", "sk_test_Y3d18LZ4e6rZ0eL9"),
 	}
 }
 

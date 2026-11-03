@@ -8,6 +8,23 @@ interface Props {
   onExpirarPase: () => void;
 }
 
+declare global {
+  interface Window {
+    Culqi?: {
+      publicKey: string;
+      settings: (opts: { title: string; currency: string; description: string; amount: number }) => void;
+      options: (opts: Record<string, unknown>) => void;
+      open: () => void;
+      close: () => void;
+      token?: { id: string };
+      error?: { user_message: string; merchant_message: string };
+    };
+    culqi?: () => void;
+  }
+}
+
+const CULQI_PUBLIC_KEY = "pk_live_cqeIUMjPyHVgpBcx";
+
 export default function CheckoutCulqiModal({
   eventoId,
   pase,
@@ -98,6 +115,106 @@ export default function CheckoutCulqiModal({
     return () => clearInterval(interval);
   }, [reserva]);
 
+  // Función común para cobrar el token (sea de Culqi Checkout o simulado)
+  const procesarTokenEnBackend = async (tokenId: string, compradorNom: string, compradorEmail: string, asientoId: number) => {
+    setProcesandoPago(true);
+    setMensajeError(null);
+    try {
+      const pagoRes = await fetch("/api/pagos", {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify({
+          asiento_id: asientoId,
+          comprador: compradorNom,
+          email: compradorEmail,
+          token_pago: tokenId,
+        }),
+      });
+
+      if (pagoRes.status === 403) {
+        onExpirarPase();
+        return;
+      }
+
+      if (!pagoRes.ok) {
+        const pagoErr = await pagoRes.json().catch(() => ({}));
+        throw new Error(pagoErr.detail || "Error al procesar el pago con Culqi");
+      }
+
+      const orden = await pagoRes.json();
+
+      const entradaRes = await fetch(`/api/entradas/${orden.codigo}?email=${encodeURIComponent(compradorEmail)}`);
+      if (entradaRes.ok) {
+        const ticket = await entradaRes.json();
+        setEntradaEmitida(ticket);
+      } else {
+        setEntradaEmitida({
+          codigo: orden.codigo,
+          evento: "PAULO LONDRA · NEXT ROUNDS TOUR 2026",
+          lugar: "Estadio Nacional · Lima",
+          fecha: "2026-08-29",
+          zona: "CAMPO A",
+          asiento: reserva ? reserva.etiqueta : "ASIENTO",
+          comprador: compradorNom,
+          monto: orden.monto,
+          tarjeta_ultimos4: orden.tarjeta ? orden.tarjeta.slice(-4) : "----",
+          qr: `<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#000"/></svg>`,
+          qr_texto: `ENTRADA-${orden.codigo}`,
+        });
+      }
+
+      setReserva(null);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setMensajeError(err.message);
+      }
+    } finally {
+      setProcesandoPago(false);
+    }
+  };
+
+  // 3. Configurar Callback Oficial de Culqi Checkout v4
+  useEffect(() => {
+    window.culqi = () => {
+      if (window.Culqi?.token) {
+        const tknId = window.Culqi.token.id;
+        window.Culqi.close();
+        if (reserva) {
+          const nom = form.comprador.trim() || "Cliente Paulo Londra";
+          const em = form.email.trim() || "cliente@ejemplo.com";
+          procesarTokenEnBackend(tknId, nom, em, reserva.id);
+        }
+      } else if (window.Culqi?.error) {
+        setMensajeError(window.Culqi.error.user_message || "Error en el Checkout de Culqi");
+      }
+    };
+  }, [reserva, form]);
+
+  const abrirCulqiCheckoutModal = () => {
+    if (!reserva) return;
+    if (!window.Culqi) {
+      setMensajeError("Cargando script de Culqi, espera un instante...");
+      return;
+    }
+    window.Culqi.publicKey = CULQI_PUBLIC_KEY;
+    window.Culqi.settings({
+      title: "PAULO LONDRA 2026",
+      currency: "PEN",
+      description: `Entrada Butaca ${reserva.etiqueta}`,
+      amount: Math.round(reserva.precio * 100),
+    });
+    window.Culqi.options({
+      lang: "es",
+      modal: true,
+      style: {
+        bannercolor: "#1F1F1F",
+        buttontext: "#ffffff",
+        maincolor: "#D31411",
+      },
+    });
+    window.Culqi.open();
+  };
+
   // 3. Apartar asiento temporalmente
   const handleReservar = async (asiento: AsientoBackend) => {
     setMensajeError(null);
@@ -145,7 +262,7 @@ export default function CheckoutCulqiModal({
     cargarAsientos();
   };
 
-  // 5. Tokenizar con Culqi y Confirmar Compra
+  // 5. Tokenizar y Confirmar Compra mediante formulario directo
   const handlePagarCulqi = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!reserva) return;
@@ -153,7 +270,6 @@ export default function CheckoutCulqiModal({
     setMensajeError(null);
 
     try {
-      // Paso 1: Tokenización con Culqi (Simulador PCI-DSS)
       const tokenRes = await fetch("/simulador-pasarela/tokenizar", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -167,61 +283,14 @@ export default function CheckoutCulqiModal({
 
       if (!tokenRes.ok) {
         const errJson = await tokenRes.json().catch(() => ({}));
-        throw new Error(errJson.detail || "Tarjeta rechazada por Culqi");
+        throw new Error(errJson.detail || "Tarjeta rechazada por la pasarela");
       }
       const tokData = await tokenRes.json();
-
-      // Paso 2: Ejecutar Cargo Seguro contra el Backend Go
-      const pagoRes = await fetch("/api/pagos", {
-        method: "POST",
-        headers: getHeaders(),
-        body: JSON.stringify({
-          asiento_id: reserva.id,
-          comprador: form.comprador,
-          email: form.email,
-          token_pago: tokData.token,
-        }),
-      });
-
-      if (pagoRes.status === 403) {
-        onExpirarPase();
-        return;
-      }
-
-      if (!pagoRes.ok) {
-        const pagoErr = await pagoRes.json().catch(() => ({}));
-        throw new Error(pagoErr.detail || "Error al procesar el pago");
-      }
-
-      const orden = await pagoRes.json();
-
-      // Paso 3: Consultar Entrada Emitida con QR Oficial
-      const entradaRes = await fetch(`/api/entradas/${orden.codigo}?email=${encodeURIComponent(form.email)}`);
-      if (entradaRes.ok) {
-        const ticket = await entradaRes.json();
-        setEntradaEmitida(ticket);
-      } else {
-        setEntradaEmitida({
-          codigo: orden.codigo,
-          evento: "PAULO LONDRA · NEXT ROUNDS TOUR 2026",
-          lugar: "Estadio Nacional · Lima",
-          fecha: "2026-08-29",
-          zona: "CAMPO A",
-          asiento: reserva.etiqueta,
-          comprador: form.comprador,
-          monto: orden.monto,
-          tarjeta_ultimos4: orden.tarjeta.slice(-4),
-          qr: `<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#000"/></svg>`,
-          qr_texto: `ENTRADA-${orden.codigo}`,
-        });
-      }
-
-      setReserva(null);
+      await procesarTokenEnBackend(tokData.token, form.comprador, form.email, reserva.id);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setMensajeError(err.message);
       }
-    } finally {
       setProcesandoPago(false);
     }
   };
@@ -499,14 +568,26 @@ export default function CheckoutCulqiModal({
 
                     <div className="pt-2 space-y-2">
                       <button
+                        type="button"
+                        onClick={abrirCulqiCheckoutModal}
+                        disabled={procesandoPago}
+                        className="w-full bg-[#1F1F1F] hover:bg-black text-white font-extrabold text-xs uppercase py-3 rounded-xs shadow-md transition-all flex items-center justify-center gap-2 border border-gray-700 cursor-pointer"
+                      >
+                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
+                        <span>Abrir Culqi Checkout Oficial</span>
+                      </button>
+
+                      <button
                         type="submit"
                         disabled={procesandoPago}
-                        className="w-full bg-[#00A859] hover:bg-[#008f4c] text-white font-extrabold text-xs uppercase py-3 rounded-xs shadow-md transition-all flex items-center justify-center gap-2"
+                        className="w-full bg-[#00A859] hover:bg-[#008f4c] text-white font-extrabold text-xs uppercase py-2.5 rounded-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
                       >
                         {procesandoPago ? (
-                          <span>Procesando pago con Culqi...</span>
+                          <span>Procesando pago...</span>
                         ) : (
-                          <span>Pagar S/ {reserva.precio.toFixed(2)} con Culqi</span>
+                          <span>Pagar S/ {reserva.precio.toFixed(2)} con Tarjeta Directa</span>
                         )}
                       </button>
 
