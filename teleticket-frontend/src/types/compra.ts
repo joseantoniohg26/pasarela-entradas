@@ -31,3 +31,4 @@ export interface EntradaGenerada {
   qr_texto: string;
   usado_en?: string | null;
 }
+
