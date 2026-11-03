@@ -2,4 +2,9 @@
 bin/
 *.exe
 .env
+paquetes/
+teleticket-frontend/node_modules/
+teleticket-frontend/src/
+pruebas/
+
 
