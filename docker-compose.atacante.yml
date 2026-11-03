@@ -17,3 +17,4 @@ services:
       - "5665:5665"
     entrypoint: ["k6"]
     command: ["run", "--web-dashboard", "--web-dashboard-port=5665", "--web-dashboard-host=0.0.0.0", "-e", "BASE=http://64.177.58.232:8000", "-e", "VUS=100", "/scripts/pruebas/carga.js"]
+

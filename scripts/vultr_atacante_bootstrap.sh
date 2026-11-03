@@ -79,4 +79,3 @@ pip install httpx
 echo "=========================================================================="
 echo ">>> Atacante / Generador de Carga listo para ejecutar pruebas"
 echo "=========================================================================="
-

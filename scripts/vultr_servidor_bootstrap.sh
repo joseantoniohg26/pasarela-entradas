@@ -73,4 +73,3 @@ docker compose up -d --build
 echo "=========================================================================="
 echo ">>> Servidor Tiquetera desplegado con exito en http://$(curl -s ifconfig.me):8000"
 echo "=========================================================================="
-

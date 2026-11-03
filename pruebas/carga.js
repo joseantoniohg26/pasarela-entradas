@@ -69,7 +69,7 @@ function pasarSalaEspera() {
   return null;
 }
 
-export default function (data) {
+export default function carga (data) {
   let pase = null;
   if (data.modo === "sala") {
     pase = pasarSalaEspera();
