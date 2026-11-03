@@ -76,7 +76,30 @@ source .venv/bin/activate
 pip install --upgrade pip
 pip install httpx
 
-echo "=========================================================================="
-echo ">>> Atacante / Generador de Carga listo para ejecutar pruebas"
-echo "=========================================================================="
+# Instalar httpx a nivel global para el dashboard
+python3 -m pip install httpx --break-system-packages 2>/dev/null || true
 
+echo ">>> 7. Configurando e iniciando el Dashboard Web del Atacante como servicio Systemd..."
+cat << 'EOF' > /etc/systemd/system/tiquetera-dashboard.service
+[Unit]
+Description=Dashboard Web de Pruebas de Carga Tiquetera
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/root/pasarela-entradas
+ExecStart=/usr/bin/python3 /root/pasarela-entradas/scripts/servidor_dashboard_atacante.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl daemon-reload
+systemctl enable --now tiquetera-dashboard
+
+echo "=========================================================================="
+echo ">>> Atacante / Generador de Carga listo con Dashboard en http://$(curl -s ifconfig.me):5665"
+echo "=========================================================================="

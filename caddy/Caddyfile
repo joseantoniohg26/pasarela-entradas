@@ -1,0 +1,6 @@
+ticketperu.duckdns.org {
+    reverse_proxy localhost:8000
+    tls {
+        protocols tls1.3
+    }
+}
