@@ -1,4 +1,5 @@
--- Esquema inicial de tablas
+-- Esquema oficial para Paulo Londra - Estadio Nacional 2026 (Teleticket)
+
 CREATE TABLE IF NOT EXISTS eventos (
     id          SERIAL PRIMARY KEY,
     nombre      TEXT NOT NULL,
@@ -17,7 +18,7 @@ CREATE TABLE IF NOT EXISTS asientos (
     fila             TEXT NOT NULL,
     numero           INT NOT NULL,
     precio           NUMERIC(10, 2) NOT NULL,
-    zona             TEXT NOT NULL DEFAULT 'General',
+    zona             TEXT NOT NULL DEFAULT 'Campo A',
     estado           TEXT NOT NULL DEFAULT 'libre'
                      CHECK (estado IN ('libre', 'reservado', 'vendido')),
     reservado_por    TEXT,
@@ -43,15 +44,39 @@ CREATE TABLE IF NOT EXISTS ordenes (
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_orden_por_asiento ON ordenes (asiento_id);
 
--- Sembrado inicial de eventos si la tabla está vacía
+-- 1. Insertar el único concierto: Paulo Londra 2026
 INSERT INTO eventos (id, nombre, artista, categoria, lugar, fecha, afiche_url, imagen, descripcion)
-VALUES 
-(1, 'BTS · WORLD TOUR ''LIGHTS'' LIMA 2026', 'BTS', 'K-Pop', 'Estadio Nacional, Lima', '2026-12-15 20:00:00-05', '/img/concierto-internacional.svg', 'concierto-internacional.svg', 'El concierto más esperado de la década en Lima. Preventa exclusiva.'),
-(2, 'Grupo 5 · 52 Años de Oro', 'Grupo 5', 'Cumbia', 'Estadio San Marcos, Lima', '2026-12-28 21:00:00-05', '/img/grupo5.jpg', 'grupo5.jpg', 'Celebración oficial de aniversario con orquesta completa.'),
-(3, 'Libido en Concierto: La Reunión', 'Libido', 'Rock', 'Arena 1, Costa Verde', '2027-01-20 20:30:00-05', '/img/libido.jpg', 'libido.jpg', 'La formación original reunida tras dos décadas.')
-ON CONFLICT (id) DO NOTHING;
+VALUES (
+    1,
+    'PAULO LONDRA · TOUR 2026',
+    'Paulo Londra',
+    'Urbano / Trap',
+    'Estadio Nacional, Lima',
+    '2026-08-29 21:00:00-05',
+    '/img/concierto-internacional.svg',
+    'concierto-internacional.svg',
+    'El deseo de miles de fanáticos finalmente se hace realidad: Paulo Londra remecerá el Estadio Nacional este sábado 29 de agosto de 2026. Organiza: CONCERTS SPORTS AEI10 S.A.C. Preventa con hasta 15% de descuento Interbank. Máximo 6 entradas por cliente.'
+)
+ON CONFLICT (id) DO UPDATE SET
+    nombre = EXCLUDED.nombre,
+    artista = EXCLUDED.artista,
+    categoria = EXCLUDED.categoria,
+    lugar = EXCLUDED.lugar,
+    fecha = EXCLUDED.fecha,
+    descripcion = EXCLUDED.descripcion;
 
--- Generar asientos para el evento 1 (BTS) de forma automática con SQL puro
+-- 2. Eliminar eventos sobrantes si existían para dejar únicamente a Paulo Londra
+DELETE FROM eventos WHERE id <> 1;
+
+-- 3. Generar la distribución oficial de sectores y butacas según tarifas de Teleticket
+-- Precios oficiales Preventa:
+-- Campo A: S/ 270.00
+-- Campo B: S/ 125.00
+-- Tribuna Occidente 1: S/ 185.00
+-- Tribuna Occidente 2: S/ 160.00
+-- Tribuna Oriente 1: S/ 185.00
+-- Tribuna Oriente 2: S/ 160.00
+-- Tribuna Norte: S/ 80.00
 DO $$
 DECLARE
     f INT;
@@ -61,20 +86,52 @@ DECLARE
     p NUMERIC;
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM asientos WHERE evento_id = 1) THEN
-        FOR f IN 0..9 LOOP
+        -- Filas A a B: Campo A (S/ 270.00)
+        FOR f IN 0..1 LOOP
             letra := chr(65 + f);
             FOR n IN 1..20 LOOP
-                IF f < 2 THEN
-                    z := 'VIP'; p := 450.00;
-                ELSIF f < 5 THEN
-                    z := 'Preferencial'; p := 280.00;
-                ELSE
-                    z := 'General'; p := 150.00;
-                END IF;
-
                 INSERT INTO asientos (evento_id, fila, numero, precio, zona, estado)
-                VALUES (1, letra, n, p, z, 'libre');
+                VALUES (1, letra, n, 270.00, 'Campo A', 'libre');
             END LOOP;
+        END LOOP;
+
+        -- Filas C a D: Campo B (S/ 125.00)
+        FOR f IN 2..3 LOOP
+            letra := chr(65 + f);
+            FOR n IN 1..20 LOOP
+                INSERT INTO asientos (evento_id, fila, numero, precio, zona, estado)
+                VALUES (1, letra, n, 125.00, 'Campo B', 'libre');
+            END LOOP;
+        END LOOP;
+
+        -- Fila E: Tribuna Occidente 1 (S/ 185.00)
+        FOR n IN 1..20 LOOP
+            INSERT INTO asientos (evento_id, fila, numero, precio, zona, estado)
+            VALUES (1, 'OCC-1', n, 185.00, 'Occidente 1', 'libre');
+        END LOOP;
+
+        -- Fila F: Tribuna Occidente 2 (S/ 160.00)
+        FOR n IN 1..20 LOOP
+            INSERT INTO asientos (evento_id, fila, numero, precio, zona, estado)
+            VALUES (1, 'OCC-2', n, 160.00, 'Occidente 2', 'libre');
+        END LOOP;
+
+        -- Fila G: Tribuna Oriente 1 (S/ 185.00)
+        FOR n IN 1..20 LOOP
+            INSERT INTO asientos (evento_id, fila, numero, precio, zona, estado)
+            VALUES (1, 'ORI-1', n, 185.00, 'Oriente 1', 'libre');
+        END LOOP;
+
+        -- Fila H: Tribuna Oriente 2 (S/ 160.00)
+        FOR n IN 1..20 LOOP
+            INSERT INTO asientos (evento_id, fila, numero, precio, zona, estado)
+            VALUES (1, 'ORI-2', n, 160.00, 'Oriente 2', 'libre');
+        END LOOP;
+
+        -- Fila I: Tribuna Norte (S/ 80.00)
+        FOR n IN 1..20 LOOP
+            INSERT INTO asientos (evento_id, fila, numero, precio, zona, estado)
+            VALUES (1, 'NORTE', n, 80.00, 'Tribuna Norte', 'libre');
         END LOOP;
     END IF;
 END $$;
