@@ -133,6 +133,7 @@ export default function App() {
             <a href="#precios" className="hover:text-gray-200 shrink-0">PRECIOS</a>
             <a href="#botonera" className="hover:text-gray-200 shrink-0 text-yellow-300">COMPRAR</a>
             <a href="#info" className="hover:text-gray-200 shrink-0">INFO EVENTO</a>
+            <a href="#multimedia" className="hover:text-gray-200 shrink-0">MULTIMEDIA</a>
             <a href="#legales" className="hover:text-gray-200 shrink-0">LEGALES</a>
           </div>
         </nav>
@@ -279,7 +280,7 @@ export default function App() {
         </div>
       </section>
 
-      {/* 4. Información del Evento y Políticas Teleticket */}
+      {/* 4. Información del Evento y Multimedia */}
       <section id="info" className="py-12 bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 grid grid-cols-1 md:grid-cols-2 gap-8 text-xs leading-relaxed text-gray-700">
           <div>
@@ -289,12 +290,31 @@ export default function App() {
             <p className="mb-3">
               El coloso de José Díaz será el epicentro de una noche diseñada para ser legendaria. Paulo Londra llega a Lima para repasar los éxitos de su carrera y los temas que lo convirtieron en un referente de la música urbana internacional.
             </p>
-            <ul className="space-y-1.5 list-disc list-inside text-gray-600">
+            <ul className="space-y-1.5 list-disc list-inside text-gray-600 mb-6">
               <li><strong>Organizador:</strong> CONCERTS SPORTS AEI10 S.A.C. (RUC: 20613825607)</li>
               <li><strong>Público Recomendado:</strong> Mayores de 18 años.</li>
               <li><strong>Ingreso de Menores:</strong> A partir de 5 años acompañados de un adulto responsable.</li>
               <li><strong>Descarga de E-Tickets:</strong> Disponible desde 2 días antes de la fecha del evento.</li>
             </ul>
+
+            <div id="multimedia" className="pt-2">
+              <h3 className="text-base font-bold text-[#1F1F1F] uppercase mb-3 border-b-2 border-[#D31411] pb-1 inline-block">
+                MULTIMEDIA
+              </h3>
+              <div className="w-full max-w-md">
+                <iframe
+                  data-testid="embed-iframe"
+                  className="reproductor w-full"
+                  style={{ borderRadius: "12px", height: "152px" }}
+                  src="https://open.spotify.com/embed/artist/3vQ0GE3mI0dAaxIMYe5g7z?utm_source=generator"
+                  frameBorder="0"
+                  allowFullScreen
+                  allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
+                  loading="lazy"
+                  title="Paulo Londra en Spotify"
+                ></iframe>
+              </div>
+            </div>
           </div>
 
           <div id="legales">
@@ -311,8 +331,27 @@ export default function App() {
         </div>
       </section>
 
-      {/* 5. Footer Oficial Teleticket */}
-      <footer className="mt-auto bg-[#1F1F1F] text-gray-400 text-xs py-8 border-t border-gray-800">
+      {/* 5. Footer Overlay Flotante Mobile (get-tickets-container) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-200 py-2.5 px-4 lg:hidden shadow-[0_-4px_10px_rgba(0,0,0,0.08)]">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex flex-col">
+            <span className="text-xs font-black uppercase text-[#1F1F1F]">Obtén tus tickets</span>
+            <span className="text-[10px] text-gray-500">Desde S/ 80.00</span>
+          </div>
+          <button
+            onClick={iniciarCompra}
+            className="bg-[#D31411] hover:bg-[#b5100d] text-white font-extrabold text-xs uppercase px-5 py-2.5 rounded-xs flex items-center gap-1.5 shadow-md active:scale-95"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+            </svg>
+            <span>Tickets</span>
+          </button>
+        </div>
+      </div>
+
+      {/* 6. Footer Oficial Teleticket */}
+      <footer className="mt-auto bg-[#1F1F1F] text-gray-400 text-xs py-8 pb-16 lg:pb-8 border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-4 sm:px-8 flex flex-col sm:flex-row justify-between items-center gap-4">
           <div className="flex items-center gap-2 text-white font-bold text-lg">
             <span className="bg-[#D31411] text-white px-1.5 py-0.5 rounded-xs font-black text-sm">T</span>
