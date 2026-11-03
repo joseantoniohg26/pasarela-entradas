@@ -68,12 +68,16 @@ type PasarelaSimulada struct {
 	httpClient     *http.Client
 }
 
-func NuevaPasarela(latenciaMs int, culqiSecretKey string) *PasarelaSimulada {
+func NuevaPasarela(latenciaMs int, culqiSecretKey ...string) *PasarelaSimulada {
+	key := ""
+	if len(culqiSecretKey) > 0 {
+		key = culqiSecretKey[0]
+	}
 	return &PasarelaSimulada{
 		tokens:         make(map[string]TokenTarjeta),
 		cargos:         make(map[string]map[string]any),
 		latenciaMs:     latenciaMs,
-		culqiSecretKey: culqiSecretKey,
+		culqiSecretKey: key,
 		httpClient:     &http.Client{Timeout: 10 * time.Second},
 	}
 }
