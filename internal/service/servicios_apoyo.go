@@ -1,16 +1,14 @@
 package service
 
 import (
-	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"net/http"
 	"regexp"
 	"strconv"
@@ -20,6 +18,36 @@ import (
 
 	qrcode "github.com/skip2/go-qrcode"
 )
+
+// PasarelaPago define el contrato de procesamiento de pagos (ISO 25010 - Mantenibilidad y Desacoplamiento).
+type PasarelaPago interface {
+	Cobrar(ctx context.Context, token string, monto float64, descripcion, email string) (map[string]any, error)
+}
+
+// GestorPasarela permite coexistencia de Culqi y el simulador de pruebas (ISO 25010 - Coexistencia y Adaptabilidad).
+type GestorPasarela struct {
+	culqi     *CulqiService
+	simulador *PasarelaSimulada
+	preferido string
+}
+
+func NuevoGestorPasarela(culqi *CulqiService, simulador *PasarelaSimulada, preferido string) *GestorPasarela {
+	return &GestorPasarela{
+		culqi:     culqi,
+		simulador: simulador,
+		preferido: preferido,
+	}
+}
+
+func (g *GestorPasarela) Cobrar(ctx context.Context, token string, monto float64, descripcion, email string) (map[string]any, error) {
+	if strings.HasPrefix(token, "tkn_") && g.culqi != nil {
+		return g.culqi.Cobrar(ctx, token, monto, descripcion, email)
+	}
+	if strings.HasPrefix(token, "tok_") || g.preferido == "simulador" || g.culqi == nil {
+		return g.simulador.Cobrar(ctx, token, monto, descripcion, email)
+	}
+	return g.culqi.Cobrar(ctx, token, monto, descripcion, email)
+}
 
 type TokenTarjeta struct {
 	Numero        string
@@ -40,12 +68,16 @@ type PasarelaSimulada struct {
 	httpClient     *http.Client
 }
 
-func NuevaPasarela(latenciaMs int, culqiSecretKey string) *PasarelaSimulada {
+func NuevaPasarela(latenciaMs int, culqiSecretKey ...string) *PasarelaSimulada {
+	key := ""
+	if len(culqiSecretKey) > 0 {
+		key = culqiSecretKey[0]
+	}
 	return &PasarelaSimulada{
 		tokens:         make(map[string]TokenTarjeta),
 		cargos:         make(map[string]map[string]any),
 		latenciaMs:     latenciaMs,
-		culqiSecretKey: culqiSecretKey,
+		culqiSecretKey: key,
 		httpClient:     &http.Client{Timeout: 10 * time.Second},
 	}
 }
@@ -141,14 +173,13 @@ func (p *PasarelaSimulada) Tokenizar(numero, vencimiento, cvv, titular string) (
 	}, nil
 }
 
-func (p *PasarelaSimulada) Cobrar(token string, monto float64, descripcion, email string) (map[string]any, error) {
-	// Si el token proviene de la API de Culqi (ej. tkn_live_ o tkn_test_) y tenemos Secret Key configurada
-	if strings.HasPrefix(token, "tkn_") && p.culqiSecretKey != "" {
-		return p.cobrarCulqiAPI(token, monto, descripcion, email)
-	}
-
+func (p *PasarelaSimulada) Cobrar(ctx context.Context, token string, monto float64, descripcion, email string) (map[string]any, error) {
 	if p.latenciaMs > 0 {
-		time.Sleep(time.Duration(p.latenciaMs) * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(time.Duration(p.latenciaMs) * time.Millisecond):
+		}
 	}
 
 	p.mu.Lock()
@@ -181,104 +212,6 @@ func (p *PasarelaSimulada) Cobrar(token string, monto float64, descripcion, emai
 	p.mu.Unlock()
 
 	return res, nil
-}
-
-func (p *PasarelaSimulada) cobrarCulqiAPI(token string, monto float64, descripcion, email string) (map[string]any, error) {
-	centimos := int64(monto * 100)
-	if descripcion == "" {
-		descripcion = "Entrada Paulo Londra - Estadio Nacional 2026"
-	}
-
-	payload := map[string]any{
-		"amount":        centimos,
-		"currency_code": "PEN",
-		"email":         email,
-		"source_id":     token,
-		"description":   descripcion,
-		"capture":       true,
-	}
-
-	cuerpoJSON, err := json.Marshal(payload)
-	if err != nil {
-		return nil, fmt.Errorf("error al serializar cargo Culqi: %w", err)
-	}
-
-	req, err := http.NewRequest(http.MethodPost, "https://api.culqi.com/v2/charges", bytes.NewBuffer(cuerpoJSON))
-	if err != nil {
-		return nil, fmt.Errorf("error creando petición a Culqi: %w", err)
-	}
-
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+p.culqiSecretKey)
-
-	resp, err := p.httpClient.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("error de conexión con Culqi: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respBytes, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("error leyendo respuesta de Culqi: %w", err)
-	}
-
-	var culqiResp map[string]any
-	if err := json.Unmarshal(respBytes, &culqiResp); err != nil {
-		return nil, fmt.Errorf("respuesta inválida de Culqi: %s", string(respBytes))
-	}
-
-	if resp.StatusCode >= 400 {
-		return nil, extraerErrorCulqi(culqiResp, resp.StatusCode)
-	}
-
-	marca, ultimos4 := extraerDatosTarjetaCulqi(culqiResp)
-	cargoID, _ := culqiResp["id"].(string)
-
-	res := map[string]any{
-		"id":               cargoID,
-		"estado":           "aprobado",
-		"monto":            monto,
-		"marca":            marca,
-		"tarjeta_ultimos4": ultimos4,
-		"titular":          email,
-	}
-
-	p.mu.Lock()
-	p.cargos[cargoID] = res
-	p.mu.Unlock()
-
-	return res, nil
-}
-
-func extraerErrorCulqi(resp map[string]any, statusCode int) error {
-	if userMsg, _ := resp["user_message"].(string); userMsg != "" {
-		return errors.New(userMsg)
-	}
-	if merchantMsg, _ := resp["merchant_message"].(string); merchantMsg != "" {
-		return errors.New(merchantMsg)
-	}
-	return fmt.Errorf("cargo rechazado por Culqi (status %d)", statusCode)
-}
-
-func extraerDatosTarjetaCulqi(resp map[string]any) (string, string) {
-	marca := "Culqi"
-	ultimos4 := "----"
-
-	srcObj, ok := resp["source"].(map[string]any)
-	if !ok {
-		return marca, ultimos4
-	}
-
-	if iin, ok := srcObj["iin"].(map[string]any); ok {
-		if m, ok := iin["card_brand"].(string); ok && m != "" {
-			marca = m
-		}
-	}
-	if last4, ok := srcObj["last_four"].(string); ok && last4 != "" {
-		ultimos4 = last4
-	}
-
-	return marca, ultimos4
 }
 
 // --- Antibots: Limitador por IP (Ventana Deslizante) ---

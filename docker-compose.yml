@@ -18,25 +18,29 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: tiquetera_app
-    restart: unless-stopped
     expose:
       - "8000"
+    env_file:
+      - .env
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/pasarela?sslmode=disable
-      - MODO_RESERVA=sala
-      - RESERVA_MINUTOS=5
-      - PASE_MINUTOS=15
-      - MAX_ENTRADAS_POR_CLIENTE=6
-      - SALA_ADMITIDOS_POR_SEG=50
-      - ANTIBOTS=1
-      - LIMITE_PETICIONES=60
-      - VENTANA_SEGUNDOS=10
-      - POOL_MAX=50
-      - POOL_TIMEOUT=5.0
-      - PAGO_LATENCIA_MS=200
-      - ADMIN_CLAVE=admin123
-      - SECRETO=tu_clave_secreta_de_produccion_super_larga
+      - MODO_RESERVA=${MODO_RESERVA:-sala}
+      - RESERVA_MINUTOS=${RESERVA_MINUTOS:-5}
+      - PASE_MINUTOS=${PASE_MINUTOS:-15}
+      - MAX_ENTRADAS_POR_CLIENTE=${MAX_ENTRADAS_POR_CLIENTE:-6}
+      - SALA_ADMITIDOS_POR_SEG=${SALA_ADMITIDOS_POR_SEG:-50}
+      - ANTIBOTS=${ANTIBOTS:-0}
+      - LIMITE_PETICIONES=${LIMITE_PETICIONES:-60}
+      - VENTANA_SEGUNDOS=${VENTANA_SEGUNDOS:-10}
+      - POOL_MAX=${POOL_MAX:-50}
+      - POOL_TIMEOUT=${POOL_TIMEOUT:-5.0}
+      - PAGO_LATENCIA_MS=${PAGO_LATENCIA_MS:-200}
+      - ADMIN_CLAVE=${ADMIN_CLAVE:-admin123}
+      - SECRETO=${SECRETO:-tu_clave_secreta_de_produccion_super_larga}
       - PUERTO=8000
+      - CULQI_PUBLIC_KEY=${CULQI_PUBLIC_KEY:-pk_test_7vR4Aqi7NhT2kKNF}
+      - CULQI_SECRET_KEY=${CULQI_SECRET_KEY:-sk_test_Y3d18LZ4e6rZ0eL9}
+      - PROVEEDOR_PAGO=${PROVEEDOR_PAGO:-culqi}
     depends_on:
       db:
         condition: service_healthy

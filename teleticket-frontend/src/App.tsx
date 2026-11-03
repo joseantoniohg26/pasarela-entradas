@@ -17,13 +17,13 @@ interface SectorTarifa {
 }
 
 const SECTORES: SectorTarifa[] = [
-  { id: "s_campo_a", nombre: "CAMPO A", tipo: "STAND UP", preventa: 270.0, full: 320.0, conadis: null, agotadoPreventa: true, agotadoFull: false, color: "#C06C23" },
-  { id: "s_campo_b", nombre: "CAMPO B", tipo: "STAND UP", preventa: 125.0, full: 147.0, conadis: null, agotadoPreventa: true, agotadoFull: false, color: "#D85830" },
-  { id: "s_occ_1", nombre: "TRIBUNA OCCIDENTE 1", tipo: "NUMERADO", preventa: 185.0, full: 217.0, conadis: 173.0, agotadoPreventa: true, agotadoFull: true, agotadoConadis: true, color: "#8E8659" },
-  { id: "s_occ_2", nombre: "TRIBUNA OCCIDENTE 2", tipo: "NUMERADO", preventa: 160.0, full: 190.0, conadis: null, agotadoPreventa: true, agotadoFull: true, color: "#1D1D1B" },
-  { id: "s_or_1", nombre: "TRIBUNA ORIENTE 1", tipo: "NUMERADO", preventa: 185.0, full: 217.0, conadis: null, agotadoPreventa: true, agotadoFull: true, color: "#8E8659" },
-  { id: "s_or_2", nombre: "TRIBUNA ORIENTE 2", tipo: "NUMERADO", preventa: 160.0, full: 190.0, conadis: null, agotadoPreventa: true, agotadoFull: true, color: "#1D1D1B" },
-  { id: "s_norte", nombre: "TRIBUNA NORTE", tipo: "SIN NUMERAR", preventa: 80.0, full: 95.0, conadis: null, agotadoPreventa: true, agotadoFull: true, color: "#788882" },
+  { id: "s_campo_a", nombre: "CAMPO A", tipo: "STAND UP", preventa: 270.0, full: 320.0, conadis: null, agotadoPreventa: false, agotadoFull: false, color: "#C06C23" },
+  { id: "s_campo_b", nombre: "CAMPO B", tipo: "STAND UP", preventa: 125.0, full: 147.0, conadis: null, agotadoPreventa: false, agotadoFull: false, color: "#D85830" },
+  { id: "s_occ_1", nombre: "TRIBUNA OCCIDENTE 1", tipo: "NUMERADO", preventa: 185.0, full: 217.0, conadis: 173.0, agotadoPreventa: false, agotadoFull: false, agotadoConadis: false, color: "#8E8659" },
+  { id: "s_occ_2", nombre: "TRIBUNA OCCIDENTE 2", tipo: "NUMERADO", preventa: 160.0, full: 190.0, conadis: null, agotadoPreventa: false, agotadoFull: false, color: "#1D1D1B" },
+  { id: "s_or_1", nombre: "TRIBUNA ORIENTE 1", tipo: "NUMERADO", preventa: 185.0, full: 217.0, conadis: null, agotadoPreventa: false, agotadoFull: false, color: "#8E8659" },
+  { id: "s_or_2", nombre: "TRIBUNA ORIENTE 2", tipo: "NUMERADO", preventa: 160.0, full: 190.0, conadis: null, agotadoPreventa: false, agotadoFull: false, color: "#1D1D1B" },
+  { id: "s_norte", nombre: "TRIBUNA NORTE", tipo: "SIN NUMERAR", preventa: 80.0, full: 95.0, conadis: null, agotadoPreventa: false, agotadoFull: false, color: "#788882" },
 ];
 
 export default function App() {
@@ -437,9 +437,19 @@ export default function App() {
                 <div>
                   <span className="text-[10px] uppercase font-bold text-gray-500 block">SECTOR SELECCIONADO</span>
                   <strong className="text-base font-black text-[#1F1F1F]">{sectorActivo.nombre}</strong>
-                  <span className="text-xs text-[#C06C23] font-bold block">
-                    Precio Full: S/ {sectorActivo.full.toFixed(2)}
-                  </span>
+                  <div className="flex flex-wrap gap-2 text-xs font-bold pt-1">
+                    <span className="text-[#0039A6] bg-blue-50 px-2 py-0.5 rounded-xs border border-blue-200">
+                      Preventa: S/ {sectorActivo.preventa.toFixed(2)}
+                    </span>
+                    <span className="text-gray-700 bg-gray-100 px-2 py-0.5 rounded-xs border border-gray-200">
+                      Full: S/ {sectorActivo.full.toFixed(2)}
+                    </span>
+                    {sectorActivo.conadis && (
+                      <span className="text-[#C06C23] bg-amber-50 px-2 py-0.5 rounded-xs border border-amber-200">
+                        CONADIS: S/ {sectorActivo.conadis.toFixed(2)}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <button
                   onClick={() => iniciarCompra(sectorActivo.id)}

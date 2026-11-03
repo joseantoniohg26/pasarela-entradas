@@ -1,6 +1,8 @@
 # Etapa 1: Compilación en Go con binario estático optimizado
 FROM golang:alpine AS builder
 
+ENV GOTOOLCHAIN=auto
+
 WORKDIR /app
 
 # Instalar dependencias de compilación
@@ -12,8 +14,8 @@ RUN go mod download
 COPY . .
 
 # CGO_ENABLED=0 para generar un binario completamente estático sin dependencias de libc
-# -ldflags="-s -w" para eliminar tablas de símbolos y reducir el tamaño del binario al mínimo
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /app/server ./cmd/server
+# -v para mostrar el progreso de compilación en tiempo real y evitar que parezca congelado
+RUN CGO_ENABLED=0 GOOS=linux go build -v -ldflags="-s -w" -o /app/server ./cmd/server
 
 # Etapa 2: Imagen final ultra-liviana (Scratch / Distroless)
 FROM alpine:3.20

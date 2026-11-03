@@ -11,6 +11,7 @@ ALTER TABLE eventos ADD COLUMN IF NOT EXISTS categoria   TEXT NOT NULL DEFAULT '
 ALTER TABLE eventos ADD COLUMN IF NOT EXISTS artista     TEXT NOT NULL DEFAULT '';
 ALTER TABLE eventos ADD COLUMN IF NOT EXISTS descripcion TEXT NOT NULL DEFAULT '';
 ALTER TABLE eventos ADD COLUMN IF NOT EXISTS imagen      TEXT NOT NULL DEFAULT '';
+ALTER TABLE eventos ADD COLUMN IF NOT EXISTS afiche_url  TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS asientos (
     id               SERIAL PRIMARY KEY,
@@ -18,12 +19,15 @@ CREATE TABLE IF NOT EXISTS asientos (
     fila             TEXT NOT NULL,
     numero           INT NOT NULL,
     precio           NUMERIC(10, 2) NOT NULL,
+    zona             TEXT NOT NULL DEFAULT '',
     estado           TEXT NOT NULL DEFAULT 'libre'
                      CHECK (estado IN ('libre', 'reservado', 'vendido')),
     reservado_por    TEXT,
     reservado_hasta  TIMESTAMPTZ,
     UNIQUE (evento_id, fila, numero)
 );
+
+ALTER TABLE asientos ADD COLUMN IF NOT EXISTS zona       TEXT NOT NULL DEFAULT '';
 
 CREATE INDEX IF NOT EXISTS idx_asientos_evento ON asientos (evento_id);
 CREATE INDEX IF NOT EXISTS idx_asientos_cliente ON asientos (reservado_por);
