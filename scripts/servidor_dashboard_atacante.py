@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Servidor Web Dashboard en Tiempo Real para el Atacante (Puerto 5665).
 
-Permite ver en el navegador (http://64.177.58.106:5665):
+Permite:
+- Configurar dinámicamente la URL / IP objetivo (ej. https://ticketperu.duckdns.org o http://64.177.58.232:8000).
 - Estado del ataque en vivo (RPS, latencias, percentiles p95, errores).
-- Botones de ejecución directa: Lanzar Sobreventa, Lanzar Test Antibots, Lanzar Carga k6.
-- Gráficos interactivos de respuesta y sobreventa.
+- Botones de ejecución directa: Lanzar Sobreventa, Test Antibots, Carga k6, Latencia.
 """
 import http.server
 import json
@@ -12,12 +12,16 @@ import os
 import subprocess
 import threading
 import time
+import urllib.parse
 
 PUERTO = 5665
+OBJETIVO_DEFAULT = "https://ticketperu.duckdns.org"
+
 ESTADO = {
     "ejecutando": False,
     "prueba_actual": None,
-    "salida_consola": "Listo para iniciar pruebas...",
+    "objetivo": OBJETIVO_DEFAULT,
+    "salida_consola": "Listo para iniciar pruebas...\nObjetivo configurado: " + OBJETIVO_DEFAULT,
     "ultima_actualizacion": time.strftime("%Y-%m-%d %H:%M:%S"),
     "metricas": {
         "p50": 0.0,
@@ -55,7 +59,7 @@ def ejecutar_comando_fondo(nombre, comando):
     global ESTADO
     ESTADO["ejecutando"] = True
     ESTADO["prueba_actual"] = nombre
-    ESTADO["salida_consola"] = f"Iniciando {nombre}...\n"
+    ESTADO["salida_consola"] = f">>> Iniciando {nombre} contra {ESTADO['objetivo']}...\n"
     ESTADO["ultima_actualizacion"] = time.strftime("%Y-%m-%d %H:%M:%S")
 
     def run():
@@ -93,7 +97,6 @@ HTML_PAGINA = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8">
   <title>Dashboard Atacante · Pasarela Teleticket</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     * { box-sizing: border-box; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: #0b0f19; color: #f1f5f9; margin: 0; padding: 1.5rem; }
@@ -104,6 +107,13 @@ HTML_PAGINA = """<!DOCTYPE html>
     .status-idle { background: #065f46; color: #6ee7b7; }
     .status-running { background: #991b1b; color: #fca5a5; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+    
+    .target-bar { background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center; }
+    .target-bar label { font-size: 0.8rem; font-weight: bold; color: #9ca3af; text-transform: uppercase; white-space: nowrap; }
+    .target-input { flex: 1; background: #000; border: 1px solid #334155; color: #38bdf8; padding: 0.6rem 0.8rem; border-radius: 6px; font-family: monospace; font-size: 0.9rem; }
+    .target-btn { background: #2563eb; color: #fff; border: 0; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    .target-btn:hover { background: #1d4ed8; }
+
     .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
     .btn { background: #1e293b; color: #fff; border: 1px solid #334155; padding: 0.9rem; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; transition: all 0.2s; font-size: 0.85rem; }
     .btn:hover { background: #334155; transform: translateY(-2px); }
@@ -122,9 +132,15 @@ HTML_PAGINA = """<!DOCTYPE html>
     <div class="header">
       <div>
         <div class="title">Centro de Control de Pruebas de Carga & RNF</div>
-        <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.2rem;">Atacante: <code>64.177.58.106</code> &rarr; Objetivo: <code>http://64.177.58.232:8000</code></div>
+        <div style="color: #94a3b8; font-size: 0.85rem; margin-top: 0.2rem;">Atacante: <code>64.177.58.106</code></div>
       </div>
       <div id="statusBadge" class="status-badge status-idle">EN ESPERA</div>
+    </div>
+
+    <div class="target-bar">
+      <label for="inputTarget">Servidor Objetivo:</label>
+      <input type="text" id="inputTarget" class="target-input" value="https://ticketperu.duckdns.org" placeholder="http://IP:PUERTO o https://dominio" />
+      <button class="target-btn" onclick="guardarObjetivo()">Fijar Objetivo</button>
     </div>
 
     <div class="actions">
@@ -160,6 +176,8 @@ HTML_PAGINA = """<!DOCTYPE html>
   </div>
 
   <script>
+    let objetivoCargado = false;
+
     async function actualizar() {
       try {
         const res = await fetch('/api/estado');
@@ -174,6 +192,11 @@ HTML_PAGINA = """<!DOCTYPE html>
           badge.className = 'status-badge status-idle';
         }
 
+        if (!objetivoCargado && data.objetivo) {
+          document.getElementById('inputTarget').value = data.objetivo;
+          objetivoCargado = true;
+        }
+
         document.getElementById('consola').textContent = data.salida_consola;
         document.getElementById('valReqs').textContent = data.metricas.reqs_total;
         document.getElementById('valP95').textContent = data.metricas.p95 + ' ms';
@@ -181,7 +204,14 @@ HTML_PAGINA = """<!DOCTYPE html>
       } catch (e) {}
     }
 
+    async function guardarObjetivo() {
+      const obj = document.getElementById('inputTarget').value.trim();
+      await fetch('/api/objetivo?url=' + encodeURIComponent(obj), { method: 'POST' });
+      actualizar();
+    }
+
     async function disparar(tipo) {
+      await guardarObjetivo();
       await fetch('/api/ejecutar?tipo=' + tipo, { method: 'POST' });
       actualizar();
     }
@@ -211,19 +241,37 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
 
     def do_POST(self):
-        if self.path.startswith("/api/ejecutar"):
+        global ESTADO
+        parsed = urllib.parse.urlparse(self.path)
+        params = urllib.parse.parse_qs(parsed.query)
+
+        if parsed.path == "/api/objetivo":
+            if "url" in params:
+                url_limpia = params["url"][0].strip().rstrip("/")
+                if not url_limpia.startswith("http://") and not url_limpia.startswith("https://"):
+                    url_limpia = "http://" + url_limpia
+                ESTADO["objetivo"] = url_limpia
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.end_headers()
+            self.wfile.write(b'{"status": "ok"}')
+            return
+
+        if parsed.path == "/api/ejecutar":
             if ESTADO["ejecutando"]:
                 self.send_response(409)
                 self.end_headers()
                 self.wfile.write(b'{"error": "Ya hay una prueba en ejecucion"}')
                 return
 
-            tipo = self.path.split("tipo=")[-1] if "tipo=" in self.path else "sobreventa"
+            tipo = params.get("tipo", ["sobreventa"])[0]
+            obj = ESTADO["objetivo"]
+
             comandos = {
-                "sobreventa": "python3 pruebas/sobreventa.py --url http://64.177.58.232:8000 --clientes 100",
-                "bots": "python3 pruebas/bots.py --url http://64.177.58.232:8000",
-                "carga": "k6 run -e BASE=http://64.177.58.232:8000 -e VUS=50 pruebas/carga.js",
-                "latencia": "python3 pruebas/latencia.py --url http://64.177.58.232:8000 --clientes 100 --ritmo 50",
+                "sobreventa": f"python3 pruebas/sobreventa.py --url {obj} --clientes 100",
+                "bots": f"python3 pruebas/bots.py --url {obj}",
+                "carga": f"k6 run -e BASE={obj} -e VUS=50 pruebas/carga.js",
+                "latencia": f"python3 pruebas/latencia.py --url {obj} --clientes 100 --ritmo 50",
             }
             cmd = comandos.get(tipo, comandos["sobreventa"])
             ejecutar_comando_fondo(tipo, f"cd /root/pasarela-entradas && {cmd}")
@@ -237,7 +285,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.end_headers()
 
     def log_message(self, format, *args):
-        pass  # Silenciar logs para no saturar consola
+        pass
 
 
 if __name__ == "__main__":
@@ -245,4 +293,3 @@ if __name__ == "__main__":
     servidor = http.server.ThreadingHTTPServer(("0.0.0.0", PUERTO), Handler)
     print(f"Dashboard Web del Atacante iniciado en http://0.0.0.0:{PUERTO}")
     servidor.serve_forever()
-
