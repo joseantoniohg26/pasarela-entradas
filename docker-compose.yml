@@ -19,8 +19,8 @@ services:
       dockerfile: Dockerfile
     container_name: tiquetera_app
     restart: unless-stopped
-    expose:
-      - "8000"
+    ports:
+      - "127.0.0.1:8000:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@db:5432/pasarela?sslmode=disable
       - MODO_RESERVA=sala
