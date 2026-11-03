@@ -24,7 +24,8 @@ type DependenciasRouter struct {
 	Cfg       *config.Config
 	Repo      *repository.Repositorio
 	Sala      *service.SalaEspera
-	Pasarela  *service.PasarelaSimulada
+	Pasarela  service.PasarelaPago
+	Simulador *service.PasarelaSimulada
 	LimiteIP  *service.LimitadorPeticiones
 	Entradas  *service.ServicioEntradas
 	Metricas  *service.Metricas
@@ -35,7 +36,8 @@ type RouterHandler struct {
 	cfg       *config.Config
 	repo      *repository.Repositorio
 	sala      *service.SalaEspera
-	pasarela  *service.PasarelaSimulada
+	pasarela  service.PasarelaPago
+	simulador *service.PasarelaSimulada
 	limiteIP  *service.LimitadorPeticiones
 	entradas  *service.ServicioEntradas
 	metricas  *service.Metricas
@@ -49,6 +51,7 @@ func NuevoRouter(deps DependenciasRouter) *RouterHandler {
 		repo:      deps.Repo,
 		sala:      deps.Sala,
 		pasarela:  deps.Pasarela,
+		simulador: deps.Simulador,
 		limiteIP:  deps.LimiteIP,
 		entradas:  deps.Entradas,
 		metricas:  deps.Metricas,
@@ -171,7 +174,11 @@ func (h *RouterHandler) tokenizar(w http.ResponseWriter, r *http.Request) {
 		h.responderError(w, http.StatusUnprocessableEntity, ErrCuerpoInvalido)
 		return
 	}
-	res, err := h.pasarela.Tokenizar(datos.Numero, datos.Vencimiento, datos.CVV, datos.Titular)
+	if h.simulador == nil {
+		h.responderError(w, http.StatusServiceUnavailable, "Simulador no disponible")
+		return
+	}
+	res, err := h.simulador.Tokenizar(datos.Numero, datos.Vencimiento, datos.CVV, datos.Titular)
 	if err != nil {
 		h.responderError(w, http.StatusUnprocessableEntity, err.Error())
 		return
@@ -181,9 +188,11 @@ func (h *RouterHandler) tokenizar(w http.ResponseWriter, r *http.Request) {
 
 func (h *RouterHandler) verConfig(w http.ResponseWriter, r *http.Request) {
 	h.responderJSON(w, http.StatusOK, map[string]any{
-		"modo":            h.cfg.ModoReserva,
-		"reserva_minutos": h.cfg.ReservaMinutos,
-		"max_entradas":    h.cfg.MaxEntradasCliente,
+		"modo":             h.cfg.ModoReserva,
+		"reserva_minutos":  h.cfg.ReservaMinutos,
+		"max_entradas":     h.cfg.MaxEntradasCliente,
+		"proveedor_pago":   h.cfg.ProveedorPago,
+		"culqi_public_key": h.cfg.CulqiPublicKey,
 	})
 }
 
@@ -388,7 +397,15 @@ func (h *RouterHandler) pagar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cargo, err := h.pasarela.Cobrar(req.TokenPago, 0, "Entrada Concierto", req.Email)
+	precio, eventoNombre, err := h.repo.ObtenerInfoReserva(r.Context(), req.AsientoID, cliente)
+	if err != nil {
+		h.metricas.Sumar("pagos_conflicto", 1)
+		h.responderError(w, http.StatusConflict, err.Error())
+		return
+	}
+
+	descripcion := fmt.Sprintf("%s - Asiento #%d", eventoNombre, req.AsientoID)
+	cargo, err := h.pasarela.Cobrar(r.Context(), req.TokenPago, precio, descripcion, req.Email)
 	if err != nil {
 		h.metricas.Sumar("pagos_rechazados", 1)
 		h.responderError(w, http.StatusPaymentRequired, err.Error())
@@ -396,8 +413,9 @@ func (h *RouterHandler) pagar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ultimos4, _ := cargo["tarjeta_ultimos4"].(string)
+	cargoID, _ := cargo["id"].(string)
 
-	orden, err := h.repo.PagarYConfirmar(r.Context(), req.AsientoID, cliente, req.Comprador, req.Email, ultimos4)
+	orden, err := h.repo.PagarYConfirmar(r.Context(), req.AsientoID, cliente, req.Comprador, req.Email, ultimos4, cargoID)
 	if err != nil {
 		h.metricas.Sumar("pagos_conflicto", 1)
 		h.responderError(w, http.StatusConflict, err.Error())

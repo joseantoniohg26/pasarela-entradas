@@ -230,7 +230,33 @@ func (r *Repositorio) Liberar(ctx context.Context, asientoID int, cliente string
 	return tag.RowsAffected() > 0, nil
 }
 
-func (r *Repositorio) PagarYConfirmar(ctx context.Context, asientoID int, cliente, comprador, email, ultimos4 string) (*domain.Orden, error) {
+func (r *Repositorio) ObtenerInfoReserva(ctx context.Context, asientoID int, cliente string) (float64, string, error) {
+	query := `SELECT a.precio, e.nombre, a.reservado_por, a.estado, a.reservado_hasta
+	            FROM asientos a
+	            JOIN eventos e ON a.evento_id = e.id
+	           WHERE a.id = $1`
+	var precio float64
+	var eventoNombre string
+	var reservadoPor *string
+	var estado string
+	var resHasta *time.Time
+
+	err := r.pool.QueryRow(ctx, query, asientoID).Scan(&precio, &eventoNombre, &reservadoPor, &estado, &resHasta)
+	if err != nil {
+		return 0, "", domain.ErrAsientoNoDisponible
+	}
+	if estado == "vendido" {
+		return 0, "", errors.New("este asiento ya fue comprado")
+	}
+	pertenece := reservadoPor != nil && *reservadoPor == cliente
+	activo := estado == "reservado" && resHasta != nil && resHasta.After(time.Now())
+	if !pertenece || !activo {
+		return 0, "", domain.ErrConflictoReserva
+	}
+	return precio, eventoNombre, nil
+}
+
+func (r *Repositorio) PagarYConfirmar(ctx context.Context, asientoID int, cliente, comprador, email, ultimos4, cargoID string) (*domain.Orden, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, err
@@ -273,11 +299,11 @@ func (r *Repositorio) PagarYConfirmar(ctx context.Context, asientoID int, client
 	_, _ = rand.Read(bytes)
 	codigo := fmt.Sprintf("ORD-%s", strings.ToUpper(hex.EncodeToString(bytes)))
 
-	insertQuery := `INSERT INTO ordenes (codigo, asiento_id, comprador, email, monto, tarjeta_ultimos4)
-	                VALUES ($1, $2, $3, $4, $5, $6)
+	insertQuery := `INSERT INTO ordenes (codigo, asiento_id, comprador, email, monto, tarjeta_ultimos4, cargo_id)
+	                VALUES ($1, $2, $3, $4, $5, $6, $7)
 	             RETURNING creado_en`
 	var creadoEn time.Time
-	err = tx.QueryRow(ctx, insertQuery, codigo, asientoID, comprador, email, precio, ultimos4).Scan(&creadoEn)
+	err = tx.QueryRow(ctx, insertQuery, codigo, asientoID, comprador, email, precio, ultimos4, cargoID).Scan(&creadoEn)
 	if err != nil {
 		return nil, err
 	}

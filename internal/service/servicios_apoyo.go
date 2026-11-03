@@ -1,6 +1,7 @@
 package service
 
 import (
+	"context"
 	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
@@ -16,6 +17,36 @@ import (
 
 	qrcode "github.com/skip2/go-qrcode"
 )
+
+// PasarelaPago define el contrato de procesamiento de pagos (ISO 25010 - Mantenibilidad y Desacoplamiento).
+type PasarelaPago interface {
+	Cobrar(ctx context.Context, token string, monto float64, descripcion, email string) (map[string]any, error)
+}
+
+// GestorPasarela permite coexistencia de Culqi y el simulador de pruebas (ISO 25010 - Coexistencia y Adaptabilidad).
+type GestorPasarela struct {
+	culqi     *CulqiService
+	simulador *PasarelaSimulada
+	preferido string
+}
+
+func NuevoGestorPasarela(culqi *CulqiService, simulador *PasarelaSimulada, preferido string) *GestorPasarela {
+	return &GestorPasarela{
+		culqi:     culqi,
+		simulador: simulador,
+		preferido: preferido,
+	}
+}
+
+func (g *GestorPasarela) Cobrar(ctx context.Context, token string, monto float64, descripcion, email string) (map[string]any, error) {
+	if strings.HasPrefix(token, "tkn_") && g.culqi != nil {
+		return g.culqi.Cobrar(ctx, token, monto, descripcion, email)
+	}
+	if strings.HasPrefix(token, "tok_") || g.preferido == "simulador" || g.culqi == nil {
+		return g.simulador.Cobrar(ctx, token, monto, descripcion, email)
+	}
+	return g.culqi.Cobrar(ctx, token, monto, descripcion, email)
+}
 
 type TokenTarjeta struct {
 	Numero        string
@@ -133,9 +164,13 @@ func (p *PasarelaSimulada) Tokenizar(numero, vencimiento, cvv, titular string) (
 	}, nil
 }
 
-func (p *PasarelaSimulada) Cobrar(token string, monto float64, descripcion, email string) (map[string]any, error) {
+func (p *PasarelaSimulada) Cobrar(ctx context.Context, token string, monto float64, descripcion, email string) (map[string]any, error) {
 	if p.latenciaMs > 0 {
-		time.Sleep(time.Duration(p.latenciaMs) * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		case <-time.After(time.Duration(p.latenciaMs) * time.Millisecond):
+		}
 	}
 
 	p.mu.Lock()

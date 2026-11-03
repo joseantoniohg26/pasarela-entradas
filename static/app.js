@@ -360,29 +360,62 @@ async function pagar(evento) {
   const datos = Object.fromEntries(new FormData(evento.target));
   const boton = $("btn-pagar");
   boton.disabled = true;
-  mensaje("Procesando pago…");
+  mensaje("Procesando pago seguro…");
   try {
-    // 1. la tarjeta va al proveedor de pagos, que devuelve un token
-    const tok = await api("/simulador-pasarela/tokenizar", {
-      method: "POST",
-      body: JSON.stringify({
-        numero: datos.numero, vencimiento: datos.vencimiento,
-        cvv: datos.cvv, titular: datos.comprador,
-      }),
-    });
-    // 2. a nuestro backend solo le llega el token
+    let tokenPago = "";
+    // ISO 25010 - Seguridad (PCI-DSS): Tokenización directa en Culqi sin tocar el backend propio
+    if (estado.cfg?.proveedor_pago === "culqi" && estado.cfg?.culqi_public_key) {
+      const partesVence = (datos.vencimiento || "").split("/");
+      const mes = partesVence[0]?.trim();
+      let anio = partesVence[1]?.trim() || "";
+      if (anio.length === 2) anio = "20" + anio;
+      const numLimpio = (datos.numero || "").replace(/\s+/g, "");
+
+      const respCulqi = await fetch("https://api.culqi.com/v2/tokens", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + estado.cfg.culqi_public_key,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          card_number: numLimpio,
+          cvv: (datos.cvv || "").trim(),
+          expiration_month: mes,
+          expiration_year: anio,
+          email: datos.email.trim(),
+        }),
+      });
+
+      const jsonCulqi = await respCulqi.json();
+      if (!respCulqi.ok || !jsonCulqi.id) {
+        throw new Error(jsonCulqi.user_message || jsonCulqi.merchant_message || "La tarjeta fue rechazada por Culqi");
+      }
+      tokenPago = jsonCulqi.id;
+    } else {
+      // 1. En modo simulador local, el navegador tokeniza con la pasarela simulada
+      const tok = await api("/simulador-pasarela/tokenizar", {
+        method: "POST",
+        body: JSON.stringify({
+          numero: datos.numero, vencimiento: datos.vencimiento,
+          cvv: datos.cvv, titular: datos.comprador,
+        }),
+      });
+      tokenPago = tok.token;
+    }
+
+    // 2. A nuestro backend solo le llega el token (cero almacenamiento de tarjeta)
     const orden = await api("/api/pagos", {
       method: "POST",
       body: JSON.stringify({
         asiento_id: estado.reserva.id, comprador: datos.comprador,
-        email: datos.email, token_pago: tok.token,
+        email: datos.email, token_pago: tokenPago,
       }),
     });
     clearInterval(estado.temporizador);
     anotarCompra(orden.codigo, datos.email);
     $("ok-codigo").textContent = orden.codigo;
     $("ok-detalle").textContent =
-      `Asiento ${estado.reserva.etiqueta} · ${soles(orden.monto)} · ${orden.tarjeta}`;
+      `Asiento ${estado.reserva.etiqueta} · ${soles(orden.monto)} · tarjeta •••• ${orden.tarjeta_ultimos4 || orden.tarjeta || ""}`;
     estado.reserva = null;
     evento.target.reset();
     mostrarPanel("ok");
@@ -549,6 +582,7 @@ async function enrutar() {
 
 async function iniciar() {
   const cfg = await api("/api/config");
+  estado.cfg = cfg;
   estado.modo = cfg.modo;
   $("minutos-reserva").textContent = cfg.reserva_minutos;
   $("modo").textContent = "modo: " + cfg.modo;

@@ -44,7 +44,9 @@ func main() {
 
 	// 2. Instanciar Servicios del Núcleo
 	sala := service.NuevaSalaEspera(cfg.SalaAdmitidosPorSeg, cfg.PaseMinutos, cfg.Secreto)
-	pasarela := service.NuevaPasarela(cfg.PagoLatenciaMs)
+	simulador := service.NuevaPasarela(cfg.PagoLatenciaMs)
+	culqi := service.NuevoCulqiService(cfg.CulqiSecretKey)
+	pasarela := service.NuevoGestorPasarela(culqi, simulador, cfg.ProveedorPago)
 	limiteIP := service.NuevoLimitador(cfg.LimitePeticiones, cfg.VentanaSegundos)
 	entradas := service.NuevoServicioEntradas(cfg.Secreto)
 	metricas := service.NuevasMetricas()
@@ -60,6 +62,7 @@ func main() {
 		Repo:      repo,
 		Sala:      sala,
 		Pasarela:  pasarela,
+		Simulador: simulador,
 		LimiteIP:  limiteIP,
 		Entradas:  entradas,
 		Metricas:  metricas,
