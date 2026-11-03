@@ -137,3 +137,4 @@ export function handleSummary(datos) {
     "resultados/k6.json": JSON.stringify(datos, null, 2),
   };
 }
+

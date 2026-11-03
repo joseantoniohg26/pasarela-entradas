@@ -2,9 +2,9 @@
 """Servidor Web Dashboard en Tiempo Real para el Atacante (Puerto 5665).
 
 Permite:
-- Configurar dinámicamente la URL / IP objetivo (ej. https://ticketperu.duckdns.org o http://64.177.58.232:8000).
-- Estado del ataque en vivo (RPS, latencias, percentiles p95, errores).
-- Botones de ejecución directa: Lanzar Sobreventa, Test Antibots, Carga k6, Latencia.
+- Configurar dinámicamente la URL / IP objetivo (ej. https://ticketperu.duckdns.org).
+- Formulario de parámetros en vivo: cantidad de personas simuladas (50k, 100k, 250k, 500k), duración y concurrencia.
+- Ejecución directa de pruebas RNF con telemetría en tiempo real y salida de terminal.
 """
 import http.server
 import json
@@ -76,7 +76,7 @@ def ejecutar_comando_fondo(nombre, comando):
             lineas = []
             for linea in iter(proc.stdout.readline, ""):
                 lineas.append(linea)
-                if len(lineas) > 300:
+                if len(lineas) > 350:
                     lineas.pop(0)
                 ESTADO["salida_consola"] = "".join(lineas)
             proc.stdout.close()
@@ -108,23 +108,28 @@ HTML_PAGINA = """<!DOCTYPE html>
     .status-running { background: #991b1b; color: #fca5a5; animation: pulse 1.5s infinite; }
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
     
-    .target-bar { background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; display: flex; gap: 0.75rem; align-items: center; }
-    .target-bar label { font-size: 0.8rem; font-weight: bold; color: #9ca3af; text-transform: uppercase; white-space: nowrap; }
-    .target-input { flex: 1; background: #000; border: 1px solid #334155; color: #38bdf8; padding: 0.6rem 0.8rem; border-radius: 6px; font-family: monospace; font-size: 0.9rem; }
-    .target-btn { background: #2563eb; color: #fff; border: 0; padding: 0.6rem 1.2rem; border-radius: 6px; font-weight: bold; cursor: pointer; }
-    .target-btn:hover { background: #1d4ed8; }
+    .panel-form { background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 1.25rem; margin-bottom: 1.5rem; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; align-items: flex-end; }
+    .form-group label { display: block; font-size: 0.75rem; font-weight: bold; color: #9ca3af; text-transform: uppercase; margin-bottom: 0.4rem; }
+    .form-control { width: 100%; background: #000; border: 1px solid #334155; color: #38bdf8; padding: 0.6rem 0.8rem; border-radius: 6px; font-family: monospace; font-size: 0.9rem; }
+    .btn-apply { background: #2563eb; color: #fff; border: 0; padding: 0.65rem 1rem; border-radius: 6px; font-weight: bold; cursor: pointer; height: 38px; width: 100%; }
+    .btn-apply:hover { background: #1d4ed8; }
 
     .actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
     .btn { background: #1e293b; color: #fff; border: 1px solid #334155; padding: 0.9rem; border-radius: 8px; font-weight: bold; cursor: pointer; text-align: center; transition: all 0.2s; font-size: 0.85rem; }
     .btn:hover { background: #334155; transform: translateY(-2px); }
     .btn-red { background: #D31411; border-color: #ef4444; }
     .btn-red:hover { background: #b91c1c; }
+    .btn-mass { background: linear-gradient(135deg, #b91c1c, #7f1d1d); border-color: #f87171; box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3); }
+    .btn-mass:hover { background: linear-gradient(135deg, #dc2626, #991b1b); }
+
     .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
     .card { background: #111827; border: 1px solid #1f2937; border-radius: 8px; padding: 1.2rem; }
     .card-title { font-size: 0.75rem; color: #9ca3af; text-transform: uppercase; font-weight: bold; }
     .card-val { font-size: 1.8rem; font-weight: 900; margin-top: 0.5rem; color: #38bdf8; }
+    
     .terminal-box { background: #000; border: 1px solid #1f2937; border-radius: 8px; padding: 1rem; margin-bottom: 1.5rem; }
-    pre { margin: 0; font-family: monospace; font-size: 0.8rem; color: #10b981; max-height: 280px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
+    pre { margin: 0; font-family: monospace; font-size: 0.8rem; color: #10b981; max-height: 320px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; }
   </style>
 </head>
 <body>
@@ -137,20 +142,43 @@ HTML_PAGINA = """<!DOCTYPE html>
       <div id="statusBadge" class="status-badge status-idle">EN ESPERA</div>
     </div>
 
-    <div class="target-bar">
-      <label for="inputTarget">Servidor Objetivo:</label>
-      <input type="text" id="inputTarget" class="target-input" value="https://ticketperu.duckdns.org" placeholder="http://IP:PUERTO o https://dominio" />
-      <button class="target-btn" onclick="guardarObjetivo()">Fijar Objetivo</button>
+    <!-- Formulario de Configuración Dinámica de Ataque -->
+    <div class="panel-form">
+      <div class="form-grid">
+        <div class="form-group" style="grid-column: span 2;">
+          <label for="inputTarget">Servidor Objetivo:</label>
+          <input type="text" id="inputTarget" class="form-control" value="https://ticketperu.duckdns.org" />
+        </div>
+        <div class="form-group">
+          <label for="selectVolumen">Volumen de Personas:</label>
+          <select id="selectVolumen" class="form-control">
+            <option value="50000">50,000 personas</option>
+            <option value="100000">100,000 personas</option>
+            <option value="250000" selected>250,000 personas (Avalancha)</option>
+            <option value="300000">300,000 personas (Stress Crítico)</option>
+            <option value="500000">500,000 personas (Overload)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="inputVUs">VUs Simultáneos k6:</label>
+          <input type="number" id="inputVUs" class="form-control" value="200" min="10" max="2000" />
+        </div>
+        <div class="form-group">
+          <button class="btn-apply" onclick="guardarConfig()">Fijar Parámetros</button>
+        </div>
+      </div>
     </div>
 
+    <!-- Botonera de Pruebas -->
     <div class="actions">
       <button class="btn btn-red" onclick="disparar('sobreventa')">1. Disparar Sobreventa (RNF-03)</button>
       <button class="btn" onclick="disparar('bots')">2. Test Antibots (RNF-05)</button>
-      <button class="btn" onclick="disparar('carga')">3. Carga k6 100 VUs (RNF-02)</button>
+      <button class="btn" onclick="disparar('carga')">3. Carga k6 Personalizada</button>
       <button class="btn" onclick="disparar('latencia')">4. Test Latencia (Percentiles)</button>
-      <button class="btn btn-red" style="background: #991b1b; border-color: #f87171;" onclick="disparar('masiva_250k')">5. Avalancha Masiva 250k (Stress Extremo)</button>
+      <button class="btn btn-mass" onclick="disparar('masiva_custom')">5. Avalancha Masiva Seleccionada</button>
     </div>
 
+    <!-- Métricas -->
     <div class="cards">
       <div class="card">
         <div class="card-title">Peticiones Totales</div>
@@ -170,6 +198,7 @@ HTML_PAGINA = """<!DOCTYPE html>
       </div>
     </div>
 
+    <!-- Salida Terminal -->
     <div class="terminal-box">
       <div style="font-size: 0.75rem; color: #9ca3af; margin-bottom: 0.5rem; font-weight: bold; text-transform: uppercase;">Salida de Terminal en Vivo:</div>
       <pre id="consola">Esperando ejecución...</pre>
@@ -205,15 +234,17 @@ HTML_PAGINA = """<!DOCTYPE html>
       } catch (e) {}
     }
 
-    async function guardarObjetivo() {
+    async function guardarConfig() {
       const obj = document.getElementById('inputTarget').value.trim();
       await fetch('/api/objetivo?url=' + encodeURIComponent(obj), { method: 'POST' });
       actualizar();
     }
 
     async function disparar(tipo) {
-      await guardarObjetivo();
-      await fetch('/api/ejecutar?tipo=' + tipo, { method: 'POST' });
+      await guardarConfig();
+      const volumen = document.getElementById('selectVolumen').value;
+      const vus = document.getElementById('inputVUs').value;
+      await fetch(`/api/ejecutar?tipo=${tipo}&volumen=${volumen}&vus=${vus}`, { method: 'POST' });
       actualizar();
     }
 
@@ -266,17 +297,19 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 return
 
             tipo = params.get("tipo", ["sobreventa"])[0]
+            volumen = params.get("volumen", ["250000"])[0]
+            vus = params.get("vus", ["200"])[0]
             obj = ESTADO["objetivo"]
 
             comandos = {
-                "sobreventa": f"python3 pruebas/sobreventa.py --url {obj} --clientes 100",
+                "sobreventa": f"python3 pruebas/sobreventa.py --url {obj} --clientes {min(int(vus), 300)}",
                 "bots": f"python3 pruebas/bots.py --url {obj}",
-                "carga": f"k6 run -e BASE={obj} -e VUS=50 pruebas/carga.js",
+                "carga": f"k6 run -e BASE={obj} -e VUS={vus} pruebas/carga.js",
                 "latencia": f"python3 pruebas/latencia.py --url {obj} --clientes 100 --ritmo 50",
-                "masiva_250k": f"k6 run -e BASE={obj} pruebas/carga_masiva_250k.js",
+                "masiva_custom": f"k6 run -e BASE={obj} -e VOLUMEN={volumen} -e VUS={vus} pruebas/carga_masiva_250k.js",
             }
             cmd = comandos.get(tipo, comandos["sobreventa"])
-            ejecutar_comando_fondo(tipo, f"cd /root/pasarela-entradas && {cmd}")
+            ejecutar_comando_fondo(f"{tipo} ({volumen} personas)", f"cd /root/pasarela-entradas && {cmd}")
 
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
