@@ -175,47 +175,7 @@ export default function CheckoutCulqiModal({
     }
   };
 
-  // 3. Configurar Callback Oficial de Culqi Checkout v4
-  useEffect(() => {
-    window.culqi = () => {
-      if (window.Culqi?.token) {
-        const tknId = window.Culqi.token.id;
-        window.Culqi.close();
-        if (reserva) {
-          const nom = form.comprador.trim() || "Cliente Paulo Londra";
-          const em = form.email.trim() || "cliente@ejemplo.com";
-          void procesarTokenEnBackend(tknId, nom, em, reserva.id);
-        }
-      } else if (window.Culqi?.error) {
-        setMensajeError(window.Culqi.error.user_message || "Error en el Checkout de Culqi");
-      }
-    };
-  }, [reserva, form]);
 
-  const abrirCulqiCheckoutModal = () => {
-    if (!reserva) return;
-    if (!window.Culqi) {
-      setMensajeError("Cargando script de Culqi, espera un instante...");
-      return;
-    }
-    window.Culqi.publicKey = CULQI_PUBLIC_KEY;
-    window.Culqi.settings({
-      title: "PAULO LONDRA 2026",
-      currency: "PEN",
-      description: `Entrada Butaca ${reserva.etiqueta}`,
-      amount: Math.round(reserva.precio * 100),
-    });
-    window.Culqi.options({
-      lang: "es",
-      modal: true,
-      style: {
-        bannercolor: "#1F1F1F",
-        buttontext: "#ffffff",
-        maincolor: "#D31411",
-      },
-    });
-    window.Culqi.open();
-  };
 
   // 3. Apartar asiento temporalmente
   const handleReservar = async (asiento: AsientoBackend) => {
@@ -285,7 +245,7 @@ export default function CheckoutCulqiModal({
         const culqiTokenRes = await fetch("https://api.culqi.com/v2/tokens", {
           method: "POST",
           headers: {
-            "Authorization": "Bearer pk_test_7vR4Aqi7NhT2kKNF",
+            "Authorization": `Bearer ${CULQI_PUBLIC_KEY}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
@@ -331,52 +291,7 @@ export default function CheckoutCulqiModal({
         tokenPago = tokData.token;
       }
 
-      // Paso 2: Ejecutar Cargo Seguro contra el Backend Go
-      const pagoRes = await fetch("/api/pagos", {
-        method: "POST",
-        headers: getHeaders(),
-        body: JSON.stringify({
-          asiento_id: reserva.id,
-          comprador: form.comprador,
-          email: form.email,
-          token_pago: tokenPago,
-        }),
-      });
-
-      if (pagoRes.status === 403) {
-        onExpirarPase();
-        return;
-      }
-
-      if (!pagoRes.ok) {
-        const pagoErr = await pagoRes.json().catch(() => ({}));
-        throw new Error(pagoErr.detail || "Error al procesar el pago");
-      }
-
-      const orden = await pagoRes.json();
-
-      // Paso 3: Consultar Entrada Emitida con QR Oficial
-      const entradaRes = await fetch(`/api/entradas/${orden.codigo}?email=${encodeURIComponent(form.email)}`);
-      if (entradaRes.ok) {
-        const ticket = await entradaRes.json();
-        setEntradaEmitida(ticket);
-      } else {
-        setEntradaEmitida({
-          codigo: orden.codigo,
-          evento: "PAULO LONDRA · NEXT ROUNDS TOUR 2026",
-          lugar: "Estadio Nacional · Lima",
-          fecha: "2026-08-29",
-          zona: "CAMPO A",
-          asiento: reserva.etiqueta,
-          comprador: form.comprador,
-          monto: orden.monto,
-          tarjeta_ultimos4: orden.tarjeta.slice(-4),
-          qr: `<svg viewBox="0 0 100 100"><rect width="100" height="100" fill="#000"/></svg>`,
-          qr_texto: `ENTRADA-${orden.codigo}`,
-        });
-      }
-
-      setReserva(null);
+      await procesarTokenEnBackend(tokenPago, form.comprador, form.email, reserva.id);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setMensajeError(err.message);
@@ -665,26 +580,17 @@ export default function CheckoutCulqiModal({
 
                     <div className="pt-2 space-y-2">
                       <button
-                        type="button"
-                        onClick={abrirCulqiCheckoutModal}
-                        disabled={procesandoPago}
-                        className="w-full bg-[#1F1F1F] hover:bg-black text-white font-extrabold text-xs uppercase py-3 rounded-xs shadow-md transition-all flex items-center justify-center gap-2 border border-gray-700 cursor-pointer"
-                      >
-                        <svg className="w-4 h-4 text-emerald-400" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                        </svg>
-                        <span>Abrir Culqi Checkout Oficial</span>
-                      </button>
-
-                      <button
                         type="submit"
                         disabled={procesandoPago}
-                        className="w-full bg-[#00A859] hover:bg-[#008f4c] text-white font-extrabold text-xs uppercase py-2.5 rounded-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        className="w-full bg-[#00A859] hover:bg-[#008f4c] text-white font-extrabold text-sm uppercase py-3 rounded-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
                       >
+                        <svg className="w-5 h-5 text-white" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+                        </svg>
                         {procesandoPago ? (
-                          <span>Procesando pago...</span>
+                          <span>Procesando pago en Culqi...</span>
                         ) : (
-                          <span>Pagar S/ {reserva.precio.toFixed(2)} con Tarjeta Directa</span>
+                          <span>Pagar S/ {reserva.precio.toFixed(2)}</span>
                         )}
                       </button>
 
