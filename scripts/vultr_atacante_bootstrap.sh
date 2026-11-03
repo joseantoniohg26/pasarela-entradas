@@ -10,12 +10,13 @@ export DEBIAN_FRONTEND=noninteractive
 
 echo ">>> 1. Actualizando sistema y paquetes de red..."
 apt-get update && apt-get upgrade -y
-apt-get install -y curl git ufw htop tmux python3 python3-pip python3-venv ca-certificates gnupg jq
+apt-get install -y curl git ufw htop tmux python3 python3-pip python3-venv ca-certificates gnupg jq docker.io docker-compose
 
 echo ">>> 2. Configurando Firewall UFW..."
 ufw default deny incoming
 ufw default allow outgoing
-ufw allow 22/tcp  # SSH
+ufw allow 22/tcp    # SSH
+ufw allow 5665/tcp  # k6 Web Dashboard en vivo
 ufw --force enable
 
 echo ">>> 3. Optimizando Kernel Linux para Concurrencia Extrema..."
