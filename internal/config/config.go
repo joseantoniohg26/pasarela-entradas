@@ -58,8 +58,8 @@ func Cargar() *Config {
 		AdminClave:          getEnv("ADMIN_CLAVE", ""),
 		Secreto:             secreto,
 		Puerto:              getEnv("PUERTO", "8000"),
-		CulqiPublicKey:      getEnv("CULQI_PUBLIC_KEY", "pk_test_7vR4Aqi7NhT2kKNF"),
-		CulqiSecretKey:      getEnv("CULQI_SECRET_KEY", "sk_test_Y3d18LZ4e6rZ0eL9"),
+		CulqiPublicKey:      getEnv("CULQI_LLAVE_PUBLICA", getEnv("CULQI_PUBLIC_KEY", "pk_test_7vR4Aqi7NhT2kKNF")),
+		CulqiSecretKey:      getEnv("CULQI_LLAVE_PRIVADA", getEnv("CULQI_SECRET_KEY", "sk_test_Y3d18LZ4e6rZ0eL9")),
 		ProveedorPago:       getEnv("PROVEEDOR_PAGO", "culqi"),
 	}
 }
