@@ -517,23 +517,20 @@ export default function App() {
       {/* 6. Spotify Floating Action Button (FAB) Flotante persistente con el Scroll */}
       <div className="fixed bottom-16 lg:bottom-6 right-5 z-40 flex flex-col items-end">
         {mostrarSpotify && (
-          <div className="mb-3 w-80 sm:w-96 bg-black/90 p-2.5 rounded-2xl shadow-2xl border border-white/10 backdrop-blur-lg animate-in fade-in slide-in-from-bottom-4 duration-200">
-            <div className="flex justify-between items-center px-2 pb-1.5 text-white text-[11px] font-bold">
-              <span className="flex items-center gap-1.5 text-[#1DB954]">
-                <span className="w-2 h-2 rounded-full bg-[#1DB954] animate-ping" />
-                <span>Paulo Londra en Spotify</span>
-              </span>
-              <button
-                onClick={() => setMostrarSpotify(false)}
-                className="text-gray-400 hover:text-white"
-              >
-                ✕
-              </button>
-            </div>
+          <div className="relative mb-3 w-80 sm:w-96 rounded-2xl shadow-2xl overflow-hidden border border-white/10 bg-black/90 backdrop-blur-lg animate-in fade-in slide-in-from-bottom-4 duration-200">
+            <button
+              type="button"
+              onClick={() => setMostrarSpotify(false)}
+              className="absolute top-2 right-2 z-10 w-6 h-6 flex items-center justify-center rounded-full bg-black/60 hover:bg-black/90 text-gray-300 hover:text-white transition-all cursor-pointer text-xs"
+              title="Cerrar reproductor"
+              aria-label="Cerrar reproductor de Spotify"
+            >
+              ✕
+            </button>
             <iframe
               data-testid="embed-iframe"
-              className="reproductor w-full border-0"
-              style={{ borderRadius: "12px", height: "152px" }}
+              className="reproductor w-full border-0 block"
+              style={{ borderRadius: "16px", height: "152px" }}
               src="https://open.spotify.com/embed/artist/3vQ0GE3mI0dAaxIMYe5g7z?utm_source=generator&theme=0"
               allowFullScreen
               allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
