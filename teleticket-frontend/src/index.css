@@ -1,24 +1,25 @@
 @import "tailwindcss";
 
-/* Los colores de la tiquetera quedan como utilidades de Tailwind: al declararlos
-   aquí se pueden usar como bg-fondo, text-oro, border-borde, etc. */
 @theme {
-  --color-fondo: #0c0a12;
-  --color-superficie: #16131f;
-  --color-superficie-2: #1e1a2b;
-  --color-borde: #2b2539;
-  --color-texto: #f5f2fa;
-  --color-suave: #a39db4;
-  --color-acento: #e11d48;
-  --color-acento-oscuro: #be123c;
-  --color-acento-claro: #fb7185;
-  --color-oro: #f5d57a;
+  --color-teleticket-red: #D31411;
+  --color-teleticket-red-hover: #b5100d;
+  --color-teleticket-dark: #1F1F1F;
+  --color-teleticket-gray: #757575;
+  --color-teleticket-light: #F4F5F7;
+  --color-teleticket-border: #E0E0E0;
+  --color-interbank-blue: #0039A6;
+  --color-interbank-green: #00A859;
 }
 
 body {
   margin: 0;
-  overflow-x: hidden;
-  background: var(--color-fondo);
-  color: var(--color-texto);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  padding: 0;
+  background-color: #ffffff;
+  color: #212121;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+html {
+  scroll-behavior: smooth;
 }
