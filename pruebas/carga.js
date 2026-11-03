@@ -66,7 +66,14 @@ export function setup() {
   check(cfg, { "la API responde": (r) => r.status === 200 });
   if (cfg.status !== 200) fail(`No se pudo hablar con ${BASE}`);
 
-  const asientos = http.get(`${BASE}/api/eventos/${EVENTO}/asientos`).json();
+  const resAsientos = http.get(`${BASE}/api/eventos/${EVENTO}/asientos`);
+  if (resAsientos.status !== 200) {
+    fail(`No se pudieron obtener asientos (${resAsientos.status}): ${resAsientos.body}`);
+  }
+  const asientos = resAsientos.json();
+  if (!Array.isArray(asientos)) {
+    fail(`Respuesta inesperada de asientos: ${resAsientos.body}`);
+  }
   const libres = asientos.filter((a) => a.estado === "libre").map((a) => a.id);
   console.log(`modo=${cfg.json().modo}  asientos libres=${libres.length}`);
   if (libres.length < 50) {
