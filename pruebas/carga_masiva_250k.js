@@ -56,7 +56,7 @@ export function setup() {
   return { modo: cfg.json().modo, asientosLibres: libres.length > 0 ? libres : [1] };
 }
 
-export default function (data) {
+export default function cargaMasiva_250k (data) {
   // 1. Cada usuario intenta entrar a la sala virtual
   const t0 = Date.now();
   const rEntrar = http.post(`${BASE}/api/sala/entrar`, null, jsonHeaders);
