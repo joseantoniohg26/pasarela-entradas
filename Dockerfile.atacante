@@ -1,0 +1,17 @@
+FROM python:3.12-alpine
+
+WORKDIR /app
+
+RUN apk add --no-cache curl ca-certificates bash
+
+# Copiar e instalar k6 oficial
+COPY --from=grafana/k6:latest /usr/bin/k6 /usr/bin/k6
+
+# Dependencias Python
+RUN pip install --no-cache-dir httpx
+
+COPY . /app
+
+EXPOSE 5665
+
+CMD ["python3", "scripts/servidor_dashboard_atacante.py"]

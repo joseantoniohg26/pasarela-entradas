@@ -245,3 +245,4 @@ if __name__ == "__main__":
     servidor = http.server.ThreadingHTTPServer(("0.0.0.0", PUERTO), Handler)
     print(f"Dashboard Web del Atacante iniciado en http://0.0.0.0:{PUERTO}")
     servidor.serve_forever()
+

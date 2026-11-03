@@ -1,20 +1,13 @@
-version: '3.8'
-
 services:
-  k6-dashboard:
-    image: grafana/k6:latest
-    container_name: tiquetera_k6_runner
+  dashboard-atacante:
+    build:
+      context: .
+      dockerfile: Dockerfile.atacante
+    container_name: tiquetera_atacante_dashboard
     restart: unless-stopped
-    volumes:
-      - .:/scripts
-    environment:
-      - K6_WEB_DASHBOARD=true
-      - K6_WEB_DASHBOARD_PORT=5665
-      - K6_WEB_DASHBOARD_HOST=0.0.0.0
-      - K6_WEB_DASHBOARD_OPEN=false
-      - BASE=http://64.177.58.232:8000
     ports:
       - "5665:5665"
-    entrypoint: ["k6"]
-    command: ["run", "--web-dashboard", "--web-dashboard-port=5665", "--web-dashboard-host=0.0.0.0", "-e", "BASE=http://64.177.58.232:8000", "-e", "VUS=100", "/scripts/pruebas/carga.js"]
-
+    environment:
+      - BASE=http://64.177.58.232:8000
+    volumes:
+      - ./resultados:/app/resultados
