@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import CheckoutCulqiModal from "./components/CheckoutCulqiModal";
 
 const BACKEND_URL = "http://127.0.0.1:8000";
 
@@ -27,6 +28,7 @@ const SECTORES: SectorTarifa[] = [
 
 export default function App() {
   const [modalCompra, setModalCompra] = useState(false);
+  const [modalCulqi, setModalCulqi] = useState(false);
   const [sectorSeleccionado, setSectorSeleccionado] = useState<string>("s_campo_a");
   const [enSala, setEnSala] = useState(false);
   const [ticketCola, setTicketCola] = useState<string | null>(null);
@@ -154,6 +156,20 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, [enSala, ticketCola]);
+
+  useEffect(() => {
+    // Si viene con pase en el hash (ej. #/comprar/1?pase=XYZ), abrir pasarela Culqi
+    const hash = window.location.hash;
+    if (hash.includes("comprar")) {
+      const match = hash.match(/pase=([^&]+)/);
+      if (match && match[1]) {
+        setPaseCompra(decodeURIComponent(match[1]));
+        setModalCulqi(true);
+      } else {
+        setModalCulqi(true);
+      }
+    }
+  }, []);
 
   const sectorActivo = SECTORES.find(s => s.id === sectorSeleccionado) || SECTORES[0];
 
@@ -541,16 +557,35 @@ export default function App() {
                   ))}
                 </div>
 
-                <a
-                  href={`${BACKEND_URL}/#/comprar/1${paseCompra ? `?pase=${paseCompra}` : ""}`}
-                  className="block w-full bg-[#D31411] hover:bg-[#b5100d] text-white font-bold text-xs uppercase py-3 rounded-xs tracking-wider"
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalCompra(false);
+                    setModalCulqi(true);
+                  }}
+                  className="w-full bg-[#D31411] hover:bg-[#b5100d] text-white font-bold text-xs uppercase py-3 rounded-xs tracking-wider cursor-pointer shadow-md transition-all active:scale-95"
                 >
-                  Continuar al Mapa de Butacas
-                </a>
+                  Continuar al Mapa de Butacas y Pago Culqi
+                </button>
               </div>
             )}
           </div>
         </div>
+      )}
+
+      {/* Modal Flotante de Pasarela Culqi, Butacas y E-Ticket */}
+      {modalCulqi && (
+        <CheckoutCulqiModal
+          eventoId={1}
+          pase={paseCompra}
+          onCerrar={() => setModalCulqi(false)}
+          onExpirarPase={() => {
+            setModalCulqi(false);
+            setPaseCompra(null);
+            alert("Tu pase de sala de espera venció. Ingresando de nuevo a la cola...");
+            iniciarCompra();
+          }}
+        />
       )}
 
       {/* Tooltip Dinámico Flotante de Sectores SVG */}
