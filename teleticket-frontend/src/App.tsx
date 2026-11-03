@@ -159,133 +159,35 @@ export default function App() {
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-[#212121]">
-      {/* 1. Header Oficial Teleticket */}
-      <header className="sticky top-0 z-50 bg-white border-b border-gray-200 shadow-xs">
-        <div className="bg-[#1F1F1F] text-white text-[11px] py-1.5 px-4 sm:px-8 flex justify-between items-center">
-          <div className="flex gap-4">
-            <span className="hover:text-gray-300 cursor-pointer font-medium">Inicio</span>
-            <span className="hover:text-gray-300 cursor-pointer">Puntos de Venta</span>
-            <span className="hover:text-gray-300 cursor-pointer">Ayuda / Preguntas Frecuentes</span>
-          </div>
-          <div className="flex gap-4">
-            <span className="hover:text-gray-300 cursor-pointer">Libro de Reclamaciones</span>
-          </div>
+      {/* 1. Header Oficial Teleticket Estilo Especial Landing */}
+      <header className="sticky top-0 z-50 bg-[#121212] border-b border-white/10 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3 flex items-center justify-between">
+          <a href="#page-top" className="flex items-center gap-2">
+            <img
+              src="https://cdn.teleticket.com.pe/images/logo-teleticket-2022.png"
+              alt="Teleticket"
+              className="h-7 sm:h-8 object-contain"
+            />
+          </a>
+
+          <nav className="flex items-center gap-4 sm:gap-7 text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-300">
+            <a href="#page-top" className="hover:text-white transition-colors">INICIO</a>
+            <a href="#price-section" className="hover:text-white transition-colors">PRECIOS</a>
+            <a href="#botonera" className="hover:text-white transition-colors">COMPRAR</a>
+            <a href="#info" className="hover:text-white transition-colors">INFO EVENTO</a>
+            <a href="#legales" className="hover:text-white transition-colors">LEGALES</a>
+          </nav>
         </div>
-
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-6">
-            <a href="#page-top" className="flex items-center gap-1 font-black text-2xl tracking-tighter text-[#D31411]">
-              <span className="bg-[#D31411] text-white px-2 py-0.5 rounded-sm font-extrabold text-xl">T</span>
-              <span>TELETICKET</span>
-            </a>
-            <button className="hidden md:flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-[#D31411]">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-              CATEGORÍAS
-            </button>
-          </div>
-
-          <div className="flex-1 max-w-md hidden sm:block">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Busca por artista, evento o lugar..."
-                className="w-full text-xs bg-gray-100 border border-gray-300 rounded-full py-2 pl-4 pr-10 focus:outline-hidden focus:border-[#D31411]"
-              />
-              <svg className="w-4 h-4 absolute right-3 top-2.5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4 text-xs font-semibold">
-            <div className="flex items-center gap-2 cursor-pointer hover:text-[#D31411]">
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-              <span>INGRESAR / REGÍSTRATE</span>
-            </div>
-          </div>
-        </div>
-
-        <nav className="bg-[#D31411] text-white">
-          <div className="max-w-7xl mx-auto px-4 sm:px-8 flex overflow-x-auto text-xs font-bold uppercase tracking-wider py-2.5 gap-6">
-            <a href="#page-top" className="hover:text-gray-200 shrink-0">INICIO</a>
-            <a href="#price-section" className="hover:text-gray-200 shrink-0 text-yellow-300 font-black">PRECIOS Y MAPA</a>
-            <a href="#botonera" className="hover:text-gray-200 shrink-0">COMPRAR</a>
-            <a href="#info" className="hover:text-gray-200 shrink-0">INFO EVENTO</a>
-            <a href="#legales" className="hover:text-gray-200 shrink-0">LEGALES</a>
-          </div>
-        </nav>
       </header>
 
-      {/* 2. Banner Principal / Hero de Paulo Londra */}
-      <section id="page-top" className="relative bg-[#0d0d11] text-white overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-8 py-10 lg:py-16 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-7 space-y-4">
-            <div className="inline-flex items-center gap-2 bg-[#D31411] text-white text-[10px] font-black uppercase px-2.5 py-1 rounded-xs tracking-wider">
-              <span>PREVENTA EXCLUSIVA INTERBANK</span>
-            </div>
-            <h1 className="text-4xl sm:text-6xl font-black tracking-tight leading-none text-white">
-              PAULO LONDRA
-            </h1>
-            <p className="text-xl sm:text-2xl font-light text-gray-300 tracking-wide uppercase">
-              NEXT ROUNDS TOUR · LIMA 2026
-            </p>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-4 text-xs">
-              <div className="border border-white/10 bg-white/5 p-3 rounded-sm">
-                <span className="text-gray-400 block text-[10px] uppercase font-bold">FECHA</span>
-                <span className="font-semibold text-white">Sábado 29 Agosto 2026</span>
-              </div>
-              <div className="border border-white/10 bg-white/5 p-3 rounded-sm">
-                <span className="text-gray-400 block text-[10px] uppercase font-bold">RECINTO</span>
-                <span className="font-semibold text-white">Estadio Nacional</span>
-              </div>
-              <div className="border border-white/10 bg-white/5 p-3 rounded-sm col-span-2 sm:col-span-1">
-                <span className="text-gray-400 block text-[10px] uppercase font-bold">HORA</span>
-                <span className="font-semibold text-white">09:00 PM</span>
-              </div>
-            </div>
-
-            <div id="botonera" className="pt-4 flex flex-wrap gap-4 items-center">
-              <button
-                onClick={() => iniciarCompra()}
-                className="bg-[#D31411] hover:bg-[#b5100d] text-white font-extrabold text-sm uppercase px-8 py-4 rounded-xs shadow-lg transition-transform active:scale-95 flex items-center gap-2"
-              >
-                <span>COMPRAR ENTRADAS</span>
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                </svg>
-              </button>
-              <span className="text-xs text-gray-300 font-medium">
-                Hasta <strong className="text-yellow-400 font-bold">15% de dscto</strong> con Tarjetas Interbank
-              </span>
-            </div>
-          </div>
-
-          <div className="lg:col-span-5 flex justify-center">
-            <div className="relative border-4 border-white/10 rounded-lg overflow-hidden shadow-2xl max-w-sm w-full bg-gradient-to-t from-black via-gray-900 to-gray-800 p-6 text-center space-y-4">
-              <div className="w-20 h-20 mx-auto rounded-full bg-[#D31411]/20 flex items-center justify-center border-2 border-[#D31411]">
-                <span className="text-3xl font-black text-white">PL</span>
-              </div>
-              <h3 className="text-lg font-bold text-white uppercase tracking-wider">Estadio Nacional · Lima</h3>
-              <p className="text-xs text-gray-400 leading-relaxed">
-                El regreso más esperado a los escenarios peruanos. Capacidad controlada mediante Sala de Espera Virtual.
-              </p>
-              <div className="border-t border-white/10 pt-4 flex justify-around text-xs">
-                <div>
-                  <span className="text-gray-400 block">DESDE</span>
-                  <strong className="text-lg text-white">S/ 80.00</strong>
-                </div>
-                <div>
-                  <span className="text-gray-400 block">AFORO</span>
-                  <strong className="text-lg text-white">50,000</strong>
-                </div>
-              </div>
-            </div>
-          </div>
+      {/* 2. Banner Principal / Hero Teleticket (Imagen de Paulo Londra a pantalla completa) */}
+      <section id="page-top" className="relative bg-[#000000] text-white flex justify-center border-b border-neutral-800">
+        <div className="w-full max-w-4xl mx-auto">
+          <img
+            src="/banner-londra.jpg"
+            alt="Paulo Londra - Next Rounds Tour 2026 - Estadio Nacional Lima"
+            className="w-full h-auto object-contain block drop-shadow-2xl"
+          />
         </div>
       </section>
 
